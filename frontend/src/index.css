@@ -1156,8 +1156,8 @@ ol {
 .insight-modal {
   position: relative;
   z-index: 1;
-  width: min(975px, 94vw);
-  max-height: min(92vh, 1075px);
+  width: min(1120px, 96vw);
+  max-height: min(96vh, 1235px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid var(--line-strong);
@@ -1528,8 +1528,8 @@ ol {
 
 @media (max-width: 720px) {
   .insight-modal {
-    width: min(96vw, 975px);
-    max-height: 92vh;
+    width: min(98vw, 1120px);
+    max-height: 96vh;
   }
 
   .insight-modal-header,
