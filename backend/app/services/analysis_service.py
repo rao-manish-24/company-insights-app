@@ -129,21 +129,28 @@ class AnalysisService:
                     )
 
         async def _run() -> CompanyAnalysisResponse:
-            return await self._analyze_uncached(cleaned_name)
+            return await self._analyze_uncached(cleaned_name, force_refresh=force_refresh)
 
         return await analyze_singleflight.do(f"analyze:{normalized}", _run)
 
-    async def _analyze_uncached(self, cleaned_name: str) -> CompanyAnalysisResponse:
+    async def _analyze_uncached(
+        self,
+        cleaned_name: str,
+        *,
+        force_refresh: bool = False,
+    ) -> CompanyAnalysisResponse:
         started = time.perf_counter()
-        logger.info("Pipeline start company=%r (uncached)", cleaned_name)
+        logger.info("Pipeline start company=%r force_refresh=%s", cleaned_name, force_refresh)
 
-        # Another coalesced waiter may have just finished writing the row
-        cached = self.repo.get_cached(cleaned_name, self.settings.analysis_cache_hours)
-        if cached:
-            logger.info("Cache filled during wait company=%r analysis_id=%s", cleaned_name, cached.id)
-            return CompanyAnalysisResponse.model_validate(cached, from_attributes=True).model_copy(
-                update={"cached": True}
-            )
+        # Only reuse a brief written by a concurrent singleflight twin.
+        # Never short-circuit a true Refresh against the long DB cache window.
+        if not force_refresh:
+            cached = self.repo.get_cached(cleaned_name, self.settings.analysis_cache_hours)
+            if cached:
+                logger.info("Cache filled during wait company=%r analysis_id=%s", cleaned_name, cached.id)
+                return CompanyAnalysisResponse.model_validate(cached, from_attributes=True).model_copy(
+                    update={"cached": True}
+                )
 
         articles = await self.news_service.fetch_company_news(cleaned_name)
         logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
