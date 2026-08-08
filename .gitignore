@@ -1,0 +1,44 @@
+# Secrets — never commit
+.env
+.env.*
+.env.example
+!frontend/.env.production
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / frontend build
+node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/src/assets/
+*.tsbuildinfo
+
+# Logs & runtime
+*.log
+logs/*
+!logs/.gitkeep
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local DB / Docker volumes
+pgdata/
+*.sqlite3
+
+# Keep assessment docs / local notes off GitHub
+README.md
+instructions.txt
+docs/
