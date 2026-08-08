@@ -1,0 +1,77 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: companypulse
+      POSTGRES_PASSWORD: companypulse
+      POSTGRES_DB: companypulse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U companypulse -d companypulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql://companypulse:companypulse@db:5432/companypulse
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost
+      NEWS_API_KEY: ${NEWS_API_KEY:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-text}
+      LOG_FILE: ${LOG_FILE:-/app/logs/companypulse.log}
+      LOG_MAX_BYTES: ${LOG_MAX_BYTES:-5000000}
+      LOG_BACKUP_COUNT: ${LOG_BACKUP_COUNT:-5}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      EMAIL_TO: ${EMAIL_TO:-}
+      EMAIL_AUTO_SEND: ${EMAIL_AUTO_SEND:-false}
+      ANALYSIS_CACHE_HOURS: ${ANALYSIS_CACHE_HOURS:-24}
+      NEWS_CACHE_MINUTES: ${NEWS_CACHE_MINUTES:-60}
+      MAX_ARTICLES: ${MAX_ARTICLES:-8}
+      ANALYZE_RATE_LIMIT: ${ANALYZE_RATE_LIMIT:-20}
+      ANALYZE_RATE_WINDOW_SECONDS: ${ANALYZE_RATE_WINDOW_SECONDS:-3600}
+      REFRESH_COOLDOWN_MINUTES: ${REFRESH_COOLDOWN_MINUTES:-15}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-5}
+      NEWS_MAX_RETRIES: ${NEWS_MAX_RETRIES:-4}
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
