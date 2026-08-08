@@ -71,6 +71,49 @@ def _list_block_html(title: str, items: list[Any], kind: str) -> str:
     )
 
 
+def _profile_html(profile: dict[str, Any]) -> str:
+    if not profile:
+        return ""
+    rows = [
+        ("Founded", profile.get("founded")),
+        ("Headquarters", profile.get("headquarters")),
+        ("Employees", profile.get("employees")),
+        ("Parent company", profile.get("parent_company")),
+        ("Revenue", profile.get("revenue")),
+        ("Operating income", profile.get("operating_income")),
+        ("Total assets", profile.get("total_assets")),
+    ]
+    facts = "".join(
+        f"<li><strong>{escape(label)}</strong> — {escape(str(value))}</li>"
+        for label, value in rows
+        if value
+    )
+    people_bits = []
+    for person in profile.get("key_people") or []:
+        if isinstance(person, dict) and person.get("name"):
+            people_bits.append(
+                f"<li><strong>{escape(str(person.get('role')))}</strong> — "
+                f"{escape(str(person.get('name')))}</li>"
+            )
+    if not facts and not people_bits:
+        return ""
+    people_block = (
+        f"<h3 style='font-family:Georgia,serif;color:#0b1f33;font-weight:400'>Key people</h3>"
+        f"<ul style='line-height:1.55;color:#1c3348'>{''.join(people_bits)}</ul>"
+        if people_bits
+        else ""
+    )
+    source = profile.get("source_url") or profile.get("source") or ""
+    source_line = (
+        f"<p style='color:#5b7186;font-size:12px'>Source: {escape(str(source))}</p>" if source else ""
+    )
+    return (
+        "<h2 style='font-family:Georgia,serif;color:#0b1f33;font-weight:400'>Company snapshot</h2>"
+        f"<ul style='line-height:1.55;color:#1c3348'>{facts}</ul>"
+        f"{people_block}{source_line}"
+    )
+
+
 def build_brief_html(analysis: CompanyAnalysis) -> str:
     company = escape(analysis.company_name)
     summary = escape(analysis.executive_summary)
@@ -86,6 +129,7 @@ def build_brief_html(analysis: CompanyAnalysis) -> str:
     <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-weight:400;color:#0b1f33;">{company} — partner brief</h1>
     <p style="margin:0 0 20px;color:#5b7186;font-size:13px;">{escape(created)} · model {model}</p>
     <p style="color:#1c3348;line-height:1.65;font-size:15px;">{summary}</p>
+    {_profile_html(getattr(analysis, "company_profile", None) or {})}
     {_list_block_html("Key themes", analysis.key_themes or [], "theme")}
     {_list_block_html("Opportunities", analysis.opportunities or [], "opportunity")}
     {_list_block_html("Risks", analysis.risks or [], "risk")}
@@ -108,8 +152,25 @@ def build_brief_text(analysis: CompanyAnalysis) -> str:
         "",
         analysis.executive_summary,
         "",
-        "Key themes:",
+        "Company snapshot:",
     ]
+    profile = getattr(analysis, "company_profile", None) or {}
+    for label, key in [
+        ("Founded", "founded"),
+        ("Headquarters", "headquarters"),
+        ("Employees", "employees"),
+        ("Parent company", "parent_company"),
+        ("Revenue", "revenue"),
+        ("Operating income", "operating_income"),
+        ("Total assets", "total_assets"),
+    ]:
+        value = profile.get(key)
+        if value:
+            lines.append(f"- {label}: {value}")
+    for person in profile.get("key_people") or []:
+        if isinstance(person, dict) and person.get("name"):
+            lines.append(f"- {person.get('role')}: {person.get('name')}")
+    lines.extend(["", "Key themes:"])
     for item in analysis.key_themes or []:
         if isinstance(item, dict):
             lines.append(f"- {item.get('theme')}: {item.get('insight')}")

@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 from app.core.config import get_settings
+from sqlalchemy import text
+
 from app.core.database import Base, engine
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
@@ -13,6 +15,17 @@ from app.core.middleware import RequestLoggingMiddleware
 from app.models import company  # noqa: F401 — register models
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_schema() -> None:
+    """create_all won't add new columns to existing tables — patch lightly."""
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "ALTER TABLE company_analyses "
+                "ADD COLUMN IF NOT EXISTS company_profile JSONB NOT NULL DEFAULT '{}'::jsonb"
+            )
+        )
 
 
 @asynccontextmanager
@@ -26,6 +39,7 @@ async def lifespan(_: FastAPI):
         settings.log_level,
     )
     Base.metadata.create_all(bind=engine)
+    _ensure_schema()
     logger.info("Database tables ready")
     yield
     logger.info("Shutting down %s", settings.app_name)

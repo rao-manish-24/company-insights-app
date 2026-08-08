@@ -9,10 +9,39 @@ from app.core.rate_limit import RateLimitError, analyze_singleflight, refresh_ra
 from app.models.company import CompanyAnalysis
 from app.models.schemas import CompanyAnalysisResponse
 from app.repositories.analysis_repository import AnalysisRepository, normalize_company_name
+from app.services.company_profile_service import CompanyProfileService, empty_profile
 from app.services.insights_agent import InsightsAgent
 from app.services.news_service import NewsService
 
 logger = logging.getLogger(__name__)
+
+
+def _merge_leadership(profile: dict, leadership_fill: dict | None) -> dict:
+    if not isinstance(leadership_fill, dict):
+        return profile
+    people = list(profile.get("key_people") or [])
+    by_role = {
+        str(item.get("role")): item
+        for item in people
+        if isinstance(item, dict) and item.get("role")
+    }
+    for role in ("CFO", "CBO", "Vice President"):
+        fill = leadership_fill.get(role)
+        if not fill or not isinstance(fill, str):
+            continue
+        name = fill.strip()
+        if not name or name.lower() in {"null", "none", "unknown", "n/a"}:
+            continue
+        existing = by_role.get(role)
+        if existing and existing.get("name"):
+            continue
+        by_role[role] = {"role": role, "name": name}
+    # Preserve stable order
+    ordered_roles = ["CEO", "COO", "CFO", "CBO", "Vice President"]
+    profile["key_people"] = [
+        by_role.get(role) or {"role": role, "name": None} for role in ordered_roles
+    ]
+    return profile
 
 
 class AnalysisService:
@@ -21,12 +50,14 @@ class AnalysisService:
         db: Session,
         news_service: NewsService | None = None,
         insights_agent: InsightsAgent | None = None,
+        profile_service: CompanyProfileService | None = None,
         settings: Settings | None = None,
     ) -> None:
         self.settings = settings or get_settings()
         self.repo = AnalysisRepository(db)
         self.news_service = news_service or NewsService(self.settings)
         self.insights_agent = insights_agent or InsightsAgent(self.settings)
+        self.profile_service = profile_service or CompanyProfileService(self.settings)
 
     def peek_cache(self, company_name: str) -> CompanyAnalysisResponse | None:
         cleaned_name = " ".join(company_name.strip().split())
@@ -117,9 +148,20 @@ class AnalysisService:
         articles = await self.news_service.fetch_company_news(cleaned_name)
         logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
 
-        insights = await asyncio.to_thread(self.insights_agent.analyze, cleaned_name, articles)
+        profile = await asyncio.to_thread(self.profile_service.fetch_profile, cleaned_name)
+        if not profile:
+            profile = empty_profile()
+
+        insights = await asyncio.to_thread(
+            self.insights_agent.analyze,
+            cleaned_name,
+            articles,
+            profile,
+        )
         used_fallback = bool(insights.pop("_fallback", False))
         model_name = "fallback-heuristic" if used_fallback else self.settings.llm_model
+        leadership_fill = insights.pop("leadership_fill", None)
+        profile = _merge_leadership(profile, leadership_fill)
 
         logger.info(
             "Insights ready company=%r themes=%s opportunities=%s risks=%s fallback=%s",
@@ -140,6 +182,7 @@ class AnalysisService:
             recommendations=insights.get("recommendations", []),
             conversation_starters=insights.get("conversation_starters", []),
             articles=[article.model_dump() for article in articles],
+            company_profile=profile,
             llm_model=model_name,
         )
         record = self.repo.save(record)

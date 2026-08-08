@@ -20,5 +20,6 @@ class CompanyAnalysis(Base):
     recommendations: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     conversation_starters: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     articles: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    company_profile: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     llm_model: Mapped[str] = mapped_column(String(128), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

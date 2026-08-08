@@ -1,6 +1,21 @@
 import { useState } from 'react'
-import type { CompanyAnalysis } from '../types'
+import type { CompanyAnalysis, CompanyProfile } from '../types'
 import { EmailBriefForm } from './EmailBriefForm'
+
+function profileHasContent(profile?: CompanyProfile | null) {
+  if (!profile) return false
+  const facts = [
+    profile.founded,
+    profile.headquarters,
+    profile.employees,
+    profile.parent_company,
+    profile.revenue,
+    profile.operating_income,
+    profile.total_assets,
+  ]
+  const people = (profile.key_people || []).some((person) => Boolean(person.name))
+  return facts.some(Boolean) || people
+}
 
 interface Props {
   analysis: CompanyAnalysis
@@ -63,6 +78,51 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
       {showEmail && (
         <section className="brief-section brief-section--email">
           <EmailBriefForm analysisId={analysis.id} />
+        </section>
+      )}
+
+      {profileHasContent(analysis.company_profile) && (
+        <section className="brief-section">
+          <div className="brief-section-head">
+            <p className="section-label">Company snapshot</p>
+            <h2>Profile & leadership</h2>
+          </div>
+          <div className="profile-grid">
+            {(
+              [
+                ['Founded', analysis.company_profile?.founded],
+                ['Headquarters', analysis.company_profile?.headquarters],
+                ['Employees', analysis.company_profile?.employees],
+                ['Parent company', analysis.company_profile?.parent_company],
+                ['Revenue', analysis.company_profile?.revenue],
+                ['Operating income', analysis.company_profile?.operating_income],
+                ['Total assets', analysis.company_profile?.total_assets],
+              ] as const
+            ).map(([label, value]) =>
+              value ? (
+                <div className="profile-fact" key={label}>
+                  <span className="profile-fact-label">{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ) : null,
+            )}
+          </div>
+          <div className="people-list">
+            {(analysis.company_profile?.key_people || []).map((person) => (
+              <div className="people-item" key={person.role}>
+                <span className="profile-fact-label">{person.role}</span>
+                <strong>{person.name || 'Not available'}</strong>
+              </div>
+            ))}
+          </div>
+          {analysis.company_profile?.source_url && (
+            <p className="profile-source">
+              Source:{' '}
+              <a href={analysis.company_profile.source_url} target="_blank" rel="noopener noreferrer">
+                {analysis.company_profile.source || 'Wikidata'}
+              </a>
+            </p>
+          )}
         </section>
       )}
 

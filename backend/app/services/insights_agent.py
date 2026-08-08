@@ -41,7 +41,35 @@ Rules:
 """
 
 
-def _build_user_prompt(company_name: str, articles: list[NewsArticle]) -> str:
+def _profile_block(profile: dict[str, Any] | None) -> str:
+    if not profile:
+        return "No structured company profile available."
+    people = profile.get("key_people") or []
+    people_lines = []
+    for person in people:
+        if isinstance(person, dict):
+            people_lines.append(f"- {person.get('role')}: {person.get('name') or 'unknown'}")
+    return "\n".join(
+        [
+            f"Founded: {profile.get('founded') or 'unknown'}",
+            f"Headquarters: {profile.get('headquarters') or 'unknown'}",
+            f"Employees: {profile.get('employees') or 'unknown'}",
+            f"Parent company: {profile.get('parent_company') or 'unknown'}",
+            f"Revenue: {profile.get('revenue') or 'unknown'}",
+            f"Operating income: {profile.get('operating_income') or 'unknown'}",
+            f"Total assets: {profile.get('total_assets') or 'unknown'}",
+            "Key people:",
+            *(people_lines or ["- none listed"]),
+            f"Source: {profile.get('source') or 'n/a'} {profile.get('source_url') or ''}".strip(),
+        ]
+    )
+
+
+def _build_user_prompt(
+    company_name: str,
+    articles: list[NewsArticle],
+    profile: dict[str, Any] | None = None,
+) -> str:
     article_blocks = []
     for idx, article in enumerate(articles, start=1):
         article_blocks.append(
@@ -59,6 +87,9 @@ def _build_user_prompt(company_name: str, articles: list[NewsArticle]) -> str:
     articles_text = "\n\n".join(article_blocks) if article_blocks else "No articles available."
 
     return f"""Company to analyze: {company_name}
+
+Structured company profile (from Wikidata; treat as factual baseline):
+{_profile_block(profile)}
 
 Recent news corpus:
 {articles_text}
@@ -80,12 +111,18 @@ Return JSON with this exact shape:
   ],
   "conversation_starters": [
     "sharp question or talking point a partner can use in the first 10 minutes"
-  ]
+  ],
+  "leadership_fill": {{
+    "CFO": "current CFO full name or null if uncertain",
+    "CBO": "current chief business officer full name or null if uncertain",
+    "Vice President": "a notable current VP relevant to clients, or null if uncertain"
+  }}
 }}
 
 Constraints:
 - Include 3-5 key_themes, 2-4 opportunities, 2-4 risks, 3-5 recommendations, 3-5 conversation_starters.
 - Be specific to {company_name}.
+- For leadership_fill: ONLY fill names you are confident are current; otherwise use null. Do not invent.
 """
 
 
@@ -101,7 +138,12 @@ class InsightsAgent:
                 base_url=self.settings.llm_base_url,
             )
 
-    def analyze(self, company_name: str, articles: list[NewsArticle]) -> dict[str, Any]:
+    def analyze(
+        self,
+        company_name: str,
+        articles: list[NewsArticle],
+        profile: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         if not self._client:
             logger.warning("LLM_API_KEY missing — using deterministic heuristic insights")
             result = self._fallback_insights(company_name, articles)
@@ -116,7 +158,7 @@ class InsightsAgent:
             len(articles),
         )
         try:
-            result = self._call_llm(company_name, articles)
+            result = self._call_llm(company_name, articles, profile=profile)
             result["_fallback"] = False
             logger.info("LLM response parsed successfully company=%r", company_name)
             return result
@@ -130,7 +172,12 @@ class InsightsAgent:
             fallback["_fallback"] = True
             return fallback
 
-    def _call_llm(self, company_name: str, articles: list[NewsArticle]) -> dict[str, Any]:
+    def _call_llm(
+        self,
+        company_name: str,
+        articles: list[NewsArticle],
+        profile: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         @retry(
             retry=retry_if_exception_type((OpenAIRateLimitError, LlmRateLimitError)),
             wait=wait_exponential_jitter(initial=2, max=45),
@@ -147,7 +194,10 @@ class InsightsAgent:
                     response_format={"type": "json_object"},
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": _build_user_prompt(company_name, articles)},
+                        {
+                            "role": "user",
+                            "content": _build_user_prompt(company_name, articles, profile=profile),
+                        },
                     ],
                 )
             except OpenAIRateLimitError:

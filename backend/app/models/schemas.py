@@ -64,11 +64,17 @@ class CompanyAnalysisResponse(BaseModel):
     recommendations: list[Any]
     conversation_starters: list[Any]
     articles: list[Any]
+    company_profile: dict[str, Any] = Field(default_factory=dict)
     llm_model: str
     created_at: datetime
     cached: bool = False
 
     model_config = {"from_attributes": True}
+
+    @field_validator("company_profile", mode="before")
+    @classmethod
+    def default_company_profile(cls, value: Any) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}
 
 
 class CompanyAnalysisListItem(BaseModel):
