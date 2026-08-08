@@ -30,11 +30,11 @@ class Settings(BaseSettings):
     # text = human-readable console logs; json = cloud-friendly structured logs
     log_format: str = "text"
     # Rotating file path; set empty to disable file logging
-    log_file: str = "logs/companypulse.log"
+    log_file: str = "logs/companyinsights.log"
     log_max_bytes: int = 5_000_000
     log_backup_count: int = 5
 
-    database_url: str = "postgresql://companypulse:companypulse@localhost:5432/companypulse"
+    database_url: str = "postgresql://companyinsights:companyinsights@localhost:5432/companyinsights"
 
     news_api_key: str = ""
     news_api_base_url: str = "https://newsapi.org/v2"

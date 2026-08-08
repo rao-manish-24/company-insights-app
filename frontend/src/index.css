@@ -132,7 +132,7 @@ ol {
   box-shadow:
     inset 0 0 0 40px rgba(255, 255, 255, 0.08),
     inset 0 0 0 80px rgba(200, 30, 69, 0.03);
-  animation: pulse-ring 8s var(--ease) infinite;
+  animation: ring-glow 8s var(--ease) infinite;
 }
 
 .app-shell {
@@ -933,7 +933,7 @@ ol {
   }
 }
 
-@keyframes pulse-ring {
+@keyframes ring-glow {
   0%,
   100% {
     opacity: 0.55;

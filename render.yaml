@@ -2,20 +2,20 @@
 # https://render.com/docs/blueprint-spec
 #
 # After deploy:
-# 1) Set secrets on companypulse-api (NEWS_API_KEY, LLM_API_KEY, SMTP_*, etc.)
-# 2) Set CORS_ORIGINS to your static site URL (https://companypulse-web.onrender.com)
-# 3) Set VITE_API_BASE_URL on companypulse-web to https://companypulse-api.onrender.com/api
+# 1) Set secrets on companyinsights-api (NEWS_API_KEY, LLM_API_KEY, SMTP_*, etc.)
+# 2) Set CORS_ORIGINS to your static site URL (https://companyinsights-web.onrender.com)
+# 3) Set VITE_API_BASE_URL on companyinsights-web to https://companyinsights-api.onrender.com/api
 # 4) Manual Deploy / clear build cache on the static site so Vite picks up the API URL
 
 databases:
-  - name: companypulse-db
+  - name: companyinsights-db
     plan: free
-    databaseName: companypulse
-    user: companypulse
+    databaseName: companyinsights
+    user: companyinsights
 
 services:
   - type: web
-    name: companypulse-api
+    name: companyinsights-api
     runtime: docker
     plan: free
     rootDir: backend
@@ -26,7 +26,7 @@ services:
         value: production
       - key: DATABASE_URL
         fromDatabase:
-          name: companypulse-db
+          name: companyinsights-db
           property: connectionString
       - key: CORS_ORIGINS
         sync: false
@@ -76,7 +76,7 @@ services:
         value: "false"
 
   - type: web
-    name: companypulse-web
+    name: companyinsights-web
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build

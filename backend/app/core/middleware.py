@@ -8,7 +8,7 @@ from starlette.responses import Response
 
 from app.core.request_context import clear_request_id, set_request_id
 
-logger = logging.getLogger("companypulse.http")
+logger = logging.getLogger("companyinsights.http")
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):

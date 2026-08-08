@@ -49,7 +49,7 @@ def _build_formatter(log_format: LogFormat) -> logging.Formatter:
 def setup_logging(
     level: str = "INFO",
     log_format: LogFormat = "text",
-    log_file: str = "logs/companypulse.log",
+    log_file: str = "logs/companyinsights.log",
     max_bytes: int = 5_000_000,
     backup_count: int = 5,
 ) -> Path | None:

@@ -264,7 +264,7 @@ class InsightsAgent:
             ],
             "recommendations": [
                 {
-                    "action": f"Open with a 60-second {company_name} pulse brief",
+                    "action": f"Open with a 60-second {company_name} insights brief",
                     "rationale": "Signals preparation and invites the client to correct or deepen the narrative.",
                 },
                 {

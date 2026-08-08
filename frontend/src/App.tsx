@@ -1,6 +1,6 @@
 import { type FormEvent } from 'react'
 import { InsightsPanel } from './components/InsightsPanel'
-import { useCompanyPulse } from './hooks/useCompanyPulse'
+import { useCompanyInsights } from './hooks/useCompanyInsights'
 
 function App() {
   const {
@@ -13,7 +13,7 @@ function App() {
     loading,
     runAnalysis,
     openRecent,
-  } = useCompanyPulse()
+  } = useCompanyInsights()
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -80,7 +80,7 @@ function App() {
                 autoComplete="organization"
               />
               <button className="btn" type="submit" disabled={loading || !query.trim()}>
-                {loading ? 'Analyzing…' : hasBrief ? 'Generate' : 'Generate pulse'}
+                {loading ? 'Analyzing…' : hasBrief ? 'Generate' : 'Generate insights'}
               </button>
             </div>
           </form>

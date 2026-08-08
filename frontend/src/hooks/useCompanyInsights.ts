@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { analyzeCompany, getAnalysis, listRecentAnalyses } from '../api'
 import type { AnalysisListItem, CompanyAnalysis } from '../types'
 
-export function useCompanyPulse() {
+export function useCompanyInsights() {
   const [query, setQuery] = useState('')
   const [analysis, setAnalysis] = useState<CompanyAnalysis | null>(null)
   const [recent, setRecent] = useState<AnalysisListItem[]>([])
@@ -30,7 +30,7 @@ export function useCompanyPulse() {
     async (companyName: string, forceRefresh = false) => {
       const trimmed = companyName.trim()
       if (!trimmed) {
-        setError('Enter a company name to generate a pulse brief.')
+        setError('Enter a company name to generate an insights brief.')
         return
       }
 

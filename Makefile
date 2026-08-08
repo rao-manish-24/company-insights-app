@@ -14,8 +14,8 @@ logs-backend:
 
 logs-file:
 	@mkdir -p logs
-	@touch logs/companypulse.log
-	tail -f logs/companypulse.log
+	@touch logs/companyinsights.log
+	tail -f logs/companyinsights.log
 
 rebuild:
 	docker compose up --build -d --force-recreate
