@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
-import { analyzeCompany, getAnalysis, listRecentAnalyses } from '../api'
+import { useCallback, useRef, useState, useTransition } from 'react'
+import { analyzeCompany, clearAnalysesHistory, getAnalysis, listRecentAnalyses } from '../api'
 import type { AnalysisListItem, CompanyAnalysis } from '../types'
+
+const HISTORY_LIMIT = 15
 
 export function useCompanyInsights() {
   const [query, setQuery] = useState('')
@@ -8,23 +10,47 @@ export function useCompanyInsights() {
   const [recent, setRecent] = useState<AnalysisListItem[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState<string | null>(null)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const [, startTransition] = useTransition()
   const requestIdRef = useRef(0)
 
-  const refreshRecent = useCallback(async () => {
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    setHistoryError(null)
     try {
-      const items = await listRecentAnalyses()
+      const items = await listRecentAnalyses(HISTORY_LIMIT)
       startTransition(() => setRecent(items))
-      setHistoryError(null)
+      setHistoryLoaded(true)
     } catch (err) {
-      setHistoryError(err instanceof Error ? err.message : 'Could not load recent briefs')
+      setHistoryError(err instanceof Error ? err.message : 'Could not load history')
+    } finally {
+      setHistoryLoading(false)
     }
   }, [startTransition])
 
-  useEffect(() => {
-    void refreshRecent()
-  }, [refreshRecent])
+  const clearHistory = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Clear all saved briefs from the library? This cannot be undone.',
+    )
+    if (!confirmed) return
+
+    setHistoryLoading(true)
+    setHistoryError(null)
+    try {
+      await clearAnalysesHistory()
+      startTransition(() => {
+        setRecent([])
+        setAnalysis(null)
+      })
+      setHistoryLoaded(true)
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : 'Could not clear history')
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [startTransition])
 
   const runAnalysis = useCallback(
     async (companyName: string, forceRefresh = false) => {
@@ -43,7 +69,7 @@ export function useCompanyInsights() {
         if (requestId !== requestIdRef.current) return
         setAnalysis(result)
         setQuery(result.company_name)
-        await refreshRecent()
+        await loadHistory()
       } catch (err) {
         if (requestId !== requestIdRef.current) return
         setError(err instanceof Error ? err.message : 'Analysis failed')
@@ -53,7 +79,7 @@ export function useCompanyInsights() {
         }
       }
     },
-    [refreshRecent],
+    [loadHistory],
   )
 
   const openRecent = useCallback(async (id: number) => {
@@ -82,8 +108,12 @@ export function useCompanyInsights() {
     recent,
     error,
     historyError,
+    historyLoading,
+    historyLoaded,
     loading,
     runAnalysis,
     openRecent,
+    loadHistory,
+    clearHistory,
   }
 }

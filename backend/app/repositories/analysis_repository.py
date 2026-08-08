@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models.company import CompanyAnalysis
@@ -55,3 +55,8 @@ class AnalysisRepository:
         self.db.commit()
         self.db.refresh(record)
         return record
+
+    def delete_all(self) -> int:
+        result = self.db.execute(delete(CompanyAnalysis))
+        self.db.commit()
+        return int(result.rowcount or 0)

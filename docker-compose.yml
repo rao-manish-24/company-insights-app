@@ -20,7 +20,7 @@ services:
       context: ./backend
     environment:
       DATABASE_URL: postgresql://companyinsights:companyinsights@db:5432/companyinsights
-      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,http://localhost
       NEWS_API_KEY: ${NEWS_API_KEY:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}

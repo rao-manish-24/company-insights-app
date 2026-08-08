@@ -215,3 +215,8 @@ class AnalysisService:
 
     def search(self, query: str, limit: int = 20) -> list[CompanyAnalysis]:
         return self.repo.search(query, limit=limit)
+
+    def clear_history(self) -> int:
+        deleted = self.repo.delete_all()
+        logger.info("Cleared analysis history deleted=%s", deleted)
+        return deleted

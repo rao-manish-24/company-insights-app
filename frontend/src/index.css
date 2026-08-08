@@ -447,7 +447,22 @@ ol {
 }
 
 .aside-head {
+  margin-bottom: 0.75rem;
+}
+
+.library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-bottom: 0.95rem;
+}
+
+.library-btn {
+  flex: 1 1 auto;
+  min-width: 6.5rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
 }
 
 .aside-head h2,

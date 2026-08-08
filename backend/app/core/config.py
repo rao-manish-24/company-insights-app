@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Company Insights"
     environment: str = "development"
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
     log_level: str = "INFO"
     # text = human-readable console logs; json = cloud-friendly structured logs
     log_format: str = "text"

@@ -90,3 +90,8 @@ class HealthResponse(BaseModel):
     status: str
     app: str
     environment: str
+
+
+class ClearHistoryResponse(BaseModel):
+    status: str
+    deleted: int

@@ -39,6 +39,6 @@ pgdata/
 *.sqlite3
 
 # Keep assessment docs / local notes off GitHub
-README.md
+README.detailed.md
 instructions.txt
 docs/

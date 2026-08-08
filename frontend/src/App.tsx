@@ -10,9 +10,13 @@ function App() {
     recent,
     error,
     historyError,
+    historyLoading,
+    historyLoaded,
     loading,
     runAnalysis,
     openRecent,
+    loadHistory,
+    clearHistory,
   } = useCompanyInsights()
 
   function onSubmit(event: FormEvent) {
@@ -139,9 +143,29 @@ function App() {
               <p className="section-label">Library</p>
               <h2>Recent briefs</h2>
             </div>
+            <div className="library-actions">
+              <button
+                type="button"
+                className="btn btn-secondary library-btn"
+                onClick={() => void loadHistory()}
+                disabled={loading || historyLoading}
+              >
+                {historyLoading ? 'Loading…' : 'Last 15'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost library-btn"
+                onClick={() => void clearHistory()}
+                disabled={loading || historyLoading}
+              >
+                Clear history
+              </button>
+            </div>
             {historyError && <p className="email-status error">{historyError}</p>}
-            {recent.length === 0 ? (
-              <p className="empty-hint">Your generated briefs will land here.</p>
+            {!historyLoaded && recent.length === 0 ? (
+              <p className="empty-hint">Use Last 15 to load previous search results from the library.</p>
+            ) : recent.length === 0 ? (
+              <p className="empty-hint">Library is empty. Generate a brief to start a history.</p>
             ) : (
               <div className="history-list">
                 {recent.map((item) => (
@@ -150,7 +174,7 @@ function App() {
                     type="button"
                     className={`history-btn ${analysis?.id === item.id ? 'active' : ''}`}
                     onClick={() => void openRecent(item.id)}
-                    disabled={loading}
+                    disabled={loading || historyLoading}
                   >
                     <span className="history-top">
                       <strong>{item.company_name}</strong>

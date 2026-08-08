@@ -11,6 +11,7 @@ from app.core.exceptions import NotFoundError
 from app.core.rate_limit import analyze_rate_limiter
 from app.models.schemas import (
     AnalyzeRequest,
+    ClearHistoryResponse,
     CompanyAnalysisListItem,
     CompanyAnalysisResponse,
     EmailBriefRequest,
@@ -126,6 +127,14 @@ def list_analyses(
     rows = service.list_recent(limit=limit)
     logger.info("Listed recent analyses count=%s limit=%s", len(rows), limit)
     return [CompanyAnalysisListItem.model_validate(row, from_attributes=True) for row in rows]
+
+
+@router.delete("/analyses", response_model=ClearHistoryResponse)
+def clear_analyses(
+    service: AnalysisService = Depends(get_analysis_service),
+) -> ClearHistoryResponse:
+    deleted = service.clear_history()
+    return ClearHistoryResponse(status="cleared", deleted=deleted)
 
 
 @router.get("/analyses/search", response_model=list[CompanyAnalysisListItem])

@@ -80,8 +80,14 @@ export function analyzeCompany(companyName: string, forceRefresh = false): Promi
   })
 }
 
-export function listRecentAnalyses(limit = 8): Promise<AnalysisListItem[]> {
+export function listRecentAnalyses(limit = 15): Promise<AnalysisListItem[]> {
   return request<AnalysisListItem[]>(`/analyses?limit=${limit}`)
+}
+
+export function clearAnalysesHistory(): Promise<{ status: string; deleted: number }> {
+  return request<{ status: string; deleted: number }>('/analyses', {
+    method: 'DELETE',
+  })
 }
 
 export function getAnalysis(id: number): Promise<CompanyAnalysis> {
