@@ -6,11 +6,15 @@ from email.mime.text import MIMEText
 from html import escape
 from typing import Any
 
+import httpx
+
 from app.core.config import Settings, get_settings
 from app.core.exceptions import UpstreamError
 from app.models.company import CompanyAnalysis
 
 logger = logging.getLogger(__name__)
+
+RESEND_API_URL = "https://api.resend.com/emails"
 
 
 class EmailServiceError(UpstreamError):
@@ -129,13 +133,22 @@ class EmailService:
         self.settings = settings or get_settings()
 
     @property
-    def is_configured(self) -> bool:
+    def resend_configured(self) -> bool:
+        return bool(self.settings.resend_api_key.strip())
+
+    @property
+    def smtp_configured(self) -> bool:
         return bool(
             self.settings.smtp_host
             and self.settings.smtp_user
             and self.settings.smtp_password
             and (self.settings.smtp_from or self.settings.smtp_user)
         )
+
+    @property
+    def is_configured(self) -> bool:
+        # Prefer Resend on cloud (HTTPS). SMTP still works locally.
+        return self.resend_configured or self.smtp_configured
 
     async def send_analysis_async(self, analysis: CompanyAnalysis, to_email: str | None = None) -> str:
         import asyncio
@@ -150,22 +163,88 @@ class EmailService:
             )
         if not self.is_configured:
             raise EmailServiceError(
-                "Email is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD "
-                "(and optionally SMTP_FROM) in .env. For Gmail, use an App Password."
+                "Email is not configured. Set RESEND_API_KEY (recommended for Render) "
+                "or SMTP_HOST/SMTP_USER/SMTP_PASSWORD for local Gmail SMTP."
             )
 
-        sender = self.settings.smtp_from or self.settings.smtp_user
         subject = f"Company Insights: {analysis.company_name} partner brief"
+        html = build_brief_html(analysis)
+        text = build_brief_text(analysis)
 
+        if self.resend_configured:
+            return self._send_via_resend(analysis, recipient, subject, html, text)
+        return self._send_via_smtp(analysis, recipient, subject, html, text)
+
+    def _send_via_resend(
+        self,
+        analysis: CompanyAnalysis,
+        recipient: str,
+        subject: str,
+        html: str,
+        text: str,
+    ) -> str:
+        sender = (
+            self.settings.resend_from.strip()
+            or self.settings.smtp_from.strip()
+            or "Company Insights <onboarding@resend.dev>"
+        )
+        logger.info(
+            "Sending brief email via Resend company=%r analysis_id=%s to=%s from=%s",
+            analysis.company_name,
+            analysis.id,
+            recipient,
+            sender,
+        )
+        try:
+            response = httpx.post(
+                RESEND_API_URL,
+                headers={
+                    "Authorization": f"Bearer {self.settings.resend_api_key.strip()}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": sender,
+                    "to": [recipient],
+                    "subject": subject,
+                    "html": html,
+                    "text": text,
+                },
+                timeout=30.0,
+            )
+            if response.status_code >= 400:
+                detail = response.text
+                try:
+                    detail = response.json().get("message") or detail
+                except Exception:
+                    pass
+                raise EmailServiceError(f"Resend API error ({response.status_code}): {detail}")
+        except EmailServiceError:
+            raise
+        except Exception as exc:
+            logger.exception("Failed to send email via Resend to=%s", recipient)
+            raise EmailServiceError(f"Failed to send email via Resend: {exc}") from exc
+
+        logger.info("Email sent via Resend to=%s company=%r", recipient, analysis.company_name)
+        return recipient
+
+    def _send_via_smtp(
+        self,
+        analysis: CompanyAnalysis,
+        recipient: str,
+        subject: str,
+        html: str,
+        text: str,
+    ) -> str:
+        sender = self.settings.smtp_from or self.settings.smtp_user
         message = MIMEMultipart("alternative")
         message["Subject"] = subject
         message["From"] = sender
         message["To"] = recipient
-        message.attach(MIMEText(build_brief_text(analysis), "plain", "utf-8"))
-        message.attach(MIMEText(build_brief_html(analysis), "html", "utf-8"))
+        message.attach(MIMEText(text, "plain", "utf-8"))
+        message.attach(MIMEText(html, "html", "utf-8"))
 
         logger.info(
-            "Sending brief email company=%r analysis_id=%s to=%s via=%s:%s",
+            "Sending brief email via SMTP company=%r analysis_id=%s to=%s via=%s:%s",
             analysis.company_name,
             analysis.id,
             recipient,
@@ -198,8 +277,8 @@ class EmailService:
                     server.login(self.settings.smtp_user, self.settings.smtp_password)
                     server.sendmail(sender, [recipient], message.as_string())
         except Exception as exc:
-            logger.exception("Failed to send email to=%s", recipient)
+            logger.exception("Failed to send email via SMTP to=%s", recipient)
             raise EmailServiceError(f"Failed to send email: {exc}") from exc
 
-        logger.info("Email sent successfully to=%s company=%r", recipient, analysis.company_name)
+        logger.info("Email sent via SMTP to=%s company=%r", recipient, analysis.company_name)
         return recipient

@@ -31,6 +31,8 @@ services:
       LOG_FILE: ${LOG_FILE:-/app/logs/companyinsights.log}
       LOG_MAX_BYTES: ${LOG_MAX_BYTES:-5000000}
       LOG_BACKUP_COUNT: ${LOG_BACKUP_COUNT:-5}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-Company Insights <onboarding@resend.dev>}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}

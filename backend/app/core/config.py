@@ -55,7 +55,12 @@ class Settings(BaseSettings):
     llm_max_retries: int = 5
     news_max_retries: int = 4
 
-    # SMTP email (Gmail App Password works free)
+    # Resend (HTTPS) — preferred on Render free tier (SMTP ports are blocked)
+    # https://resend.com — free tier; use onboarding@resend.dev until a domain is verified
+    resend_api_key: str = ""
+    resend_from: str = "Company Insights <onboarding@resend.dev>"
+
+    # SMTP email (Gmail App Password) — works locally; blocked on Render free web services
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
