@@ -74,12 +74,5 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         sync: false
-    routes:
-      # Don't serve the SPA for /api/* — send those to the API service instead
-      # (see https://render.com/docs/redirects-rewrites)
-      - type: redirect
-        source: /api/*
-        destination: https://companyinsights-api.onrender.com/api/*
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    # No SPA catch-all: only "/" (index.html) is valid.
+    # Paths like /sujay, /names, /api/health/sujay must 404 instead of loading the app.
