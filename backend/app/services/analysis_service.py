@@ -67,7 +67,16 @@ class AnalysisService:
                 )
             except RateLimitError:
                 latest = self.repo.get_cached(cleaned_name, max(self.settings.analysis_cache_hours, 24) * 7)
-                if latest:
+                # Allow one more upstream run if the only cached brief is a fallback
+                # (e.g. LLM key was missing/failing on first generate, then fixed).
+                is_fallback = bool(
+                    latest
+                    and (
+                        latest.llm_model == "fallback-heuristic"
+                        or str(latest.executive_summary or "").startswith("[Fallback mode")
+                    )
+                )
+                if latest and not is_fallback:
                     logger.info(
                         "Refresh cooldown — serving cached brief company=%r id=%s",
                         cleaned_name,
@@ -76,10 +85,17 @@ class AnalysisService:
                     return CompanyAnalysisResponse.model_validate(latest, from_attributes=True).model_copy(
                         update={"cached": True}
                     )
-                raise RateLimitError(
-                    f"Refresh cooldown active for {cleaned_name}. "
-                    f"Try again in about {self.settings.refresh_cooldown_minutes} minutes."
-                )
+                if is_fallback:
+                    logger.info(
+                        "Refresh cooldown bypass — cached brief is fallback company=%r id=%s",
+                        cleaned_name,
+                        latest.id if latest else None,
+                    )
+                else:
+                    raise RateLimitError(
+                        f"Refresh cooldown active for {cleaned_name}. "
+                        f"Try again in about {self.settings.refresh_cooldown_minutes} minutes."
+                    )
 
         async def _run() -> CompanyAnalysisResponse:
             return await self._analyze_uncached(cleaned_name)

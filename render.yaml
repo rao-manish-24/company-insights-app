@@ -55,7 +55,7 @@ services:
       - key: ANALYZE_RATE_WINDOW_SECONDS
         value: "3600"
       - key: REFRESH_COOLDOWN_MINUTES
-        value: "30"
+        value: "5"
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT

@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     # API self-throttling (process-local)
     analyze_rate_limit: int = 20
     analyze_rate_window_seconds: int = 3600
-    refresh_cooldown_minutes: int = 15
+    refresh_cooldown_minutes: int = 5
     llm_max_retries: int = 5
     news_max_retries: int = 4
 
