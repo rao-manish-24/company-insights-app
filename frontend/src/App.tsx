@@ -2,6 +2,25 @@ import { type FormEvent } from 'react'
 import { InsightsPanel } from './components/InsightsPanel'
 import { useCompanyInsights } from './hooks/useCompanyInsights'
 
+function formatLibraryDate(iso: string) {
+  const date = new Date(iso)
+  const now = new Date()
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+
+  if (sameDay) {
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric',
+  })
+}
+
 function App() {
   const {
     query,
@@ -65,7 +84,9 @@ function App() {
           {hasBrief && (
             <div className="hero-compact-copy">
               <p className="hero-compact-brand">Company Insights</p>
-              <p className="hero-compact-sub">Generate another brief or reopen one from the library.</p>
+              <p className="hero-compact-sub">
+                Generate another brief, refresh the open one, or reopen from the library.
+              </p>
             </div>
           )}
 
@@ -93,11 +114,18 @@ function App() {
             {loading && (
               <span className="loading">
                 <span className="spinner" aria-hidden="true" />
-                Gathering coverage and drafting the brief…
+                <span className="loading-copy">
+                  <strong>Building the brief</strong>
+                  <span>News intake → insight agent → structured recommendations</span>
+                </span>
               </span>
             )}
             {!loading && error}
-            {!loading && !error && analysis?.cached && 'Showing a recent cached brief for this company.'}
+            {!loading && !error && analysis?.cached && (
+              <span className="status-cached">
+                Showing a recent cached brief for this company. Refresh for a new pull.
+              </span>
+            )}
           </div>
         </section>
 
@@ -107,21 +135,29 @@ function App() {
               <span className="process-num">01</span>
               <div>
                 <h2>News intake</h2>
-                <p>Recent coverage pulled for the company you name.</p>
+                <p>
+                  Recent public coverage pulled for the company you name, with sources kept for
+                  evidence.
+                </p>
               </div>
             </div>
             <div className="process-item">
               <span className="process-num">02</span>
               <div>
                 <h2>Insight agent</h2>
-                <p>Themes, upside, risks, and talk tracks grounded in that news.</p>
+                <p>
+                  Themes, upside, risks, recommendations, and talk tracks grounded in that news —
+                  plus a company snapshot.
+                </p>
               </div>
             </div>
             <div className="process-item">
               <span className="process-num">03</span>
               <div>
                 <h2>Reusable brief</h2>
-                <p>Saved for quick revisit before the client conversation.</p>
+                <p>
+                  Saved in your library to reopen before the client conversation, email, or refresh.
+                </p>
               </div>
             </div>
           </section>
@@ -142,6 +178,13 @@ function App() {
             <div className="aside-head">
               <p className="section-label">Library</p>
               <h2>Recent briefs</h2>
+              <p className="aside-lead">
+                {historyLoaded
+                  ? recent.length > 0
+                    ? `${recent.length} brief${recent.length === 1 ? '' : 's'} ready to reopen.`
+                    : 'No saved briefs yet.'
+                  : 'Load your previous searches, or generate a new brief.'}
+              </p>
             </div>
             <div className="library-actions">
               <button
@@ -168,7 +211,7 @@ function App() {
               <p className="empty-hint">Library is empty. Generate a brief to start a history.</p>
             ) : (
               <div className="history-list">
-                {recent.map((item) => (
+                {recent.map((item, index) => (
                   <button
                     key={item.id}
                     type="button"
@@ -177,17 +220,17 @@ function App() {
                     disabled={loading || historyLoading}
                   >
                     <span className="history-top">
-                      <strong>{item.company_name}</strong>
-                      <time dateTime={item.created_at}>
-                        {new Date(item.created_at).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </time>
+                      <span className="history-name-row">
+                        <span className="history-index" aria-hidden="true">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <strong>{item.company_name}</strong>
+                      </span>
+                      <time dateTime={item.created_at}>{formatLibraryDate(item.created_at)}</time>
                     </span>
                     <span className="history-excerpt">
-                      {item.executive_summary.slice(0, 96)}
-                      {item.executive_summary.length > 96 ? '…' : ''}
+                      {item.executive_summary.slice(0, 110)}
+                      {item.executive_summary.length > 110 ? '…' : ''}
                     </span>
                   </button>
                 ))}

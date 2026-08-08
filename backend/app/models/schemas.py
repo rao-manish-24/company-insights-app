@@ -95,3 +95,38 @@ class HealthResponse(BaseModel):
 class ClearHistoryResponse(BaseModel):
     status: str
     deleted: int
+
+
+class ExpandInsightRequest(BaseModel):
+    kind: str = Field(..., pattern="^(opportunity|risk|recommendation)$")
+    index: int = Field(..., ge=0, le=50)
+    depth: str = Field(default="standard", pattern="^(standard|deep)$")
+    prior_analysis: str | None = Field(default=None, max_length=8000)
+
+
+class ExpandInsightSource(BaseModel):
+    title: str
+    source: str | None = None
+    url: str | None = None
+    published_at: str | None = None
+    description: str | None = None
+
+
+class SpotlightPoint(BaseModel):
+    point: str
+    explanation: str
+
+
+class ExpandInsightResponse(BaseModel):
+    kind: str
+    index: int
+    depth: str = "standard"
+    heading: str
+    deeper_analysis: str
+    why_it_matters: str
+    questions_to_ask: list[str] = Field(default_factory=list)
+    suggested_moves: list[str] = Field(default_factory=list)
+    detailed_narrative: str | None = None
+    spotlight_points: list[SpotlightPoint] = Field(default_factory=list)
+    sources: list[ExpandInsightSource] = Field(default_factory=list)
+    fallback: bool = False

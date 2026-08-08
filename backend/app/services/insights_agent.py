@@ -49,6 +49,15 @@ def _profile_block(profile: dict[str, Any] | None) -> str:
     for person in people:
         if isinstance(person, dict):
             people_lines.append(f"- {person.get('role')}: {person.get('name') or 'unknown'}")
+    market = profile.get("market") if isinstance(profile.get("market"), dict) else {}
+    market_lines = [
+        f"Ticker: {market.get('ticker') or 'unknown'}",
+        f"Price: {market.get('price') or 'unknown'} ({market.get('change_percent') or 'n/a'})",
+        f"Market cap: {market.get('market_cap') or 'unknown'}",
+        f"Trailing P/E: {market.get('pe_ratio') or 'unknown'}",
+        f"Sector / industry: {market.get('sector') or 'unknown'} / {market.get('industry') or 'unknown'}",
+        f"52-week range: {market.get('fifty_two_week_low') or '?'} – {market.get('fifty_two_week_high') or '?'}",
+    ]
     return "\n".join(
         [
             f"Founded: {profile.get('founded') or 'unknown'}",
@@ -58,6 +67,8 @@ def _profile_block(profile: dict[str, Any] | None) -> str:
             f"Revenue: {profile.get('revenue') or 'unknown'}",
             f"Operating income: {profile.get('operating_income') or 'unknown'}",
             f"Total assets: {profile.get('total_assets') or 'unknown'}",
+            "Market snapshot (Yahoo Finance):",
+            *[f"- {line}" for line in market_lines],
             "Key people:",
             *(people_lines or ["- none listed"]),
             f"Source: {profile.get('source') or 'n/a'} {profile.get('source_url') or ''}".strip(),
@@ -88,7 +99,7 @@ def _build_user_prompt(
 
     return f"""Company to analyze: {company_name}
 
-Structured company profile (from Wikidata; treat as factual baseline):
+Structured company profile (Wikidata + Yahoo Finance market data; treat as factual baseline):
 {_profile_block(profile)}
 
 Recent news corpus:
@@ -101,13 +112,13 @@ Return JSON with this exact shape:
     {{"theme": "short label", "insight": "1-2 sentence evidence-based insight", "evidence": ["article title or source cue"]}}
   ],
   "opportunities": [
-    {{"title": "opportunity label", "detail": "why it matters for a client conversation", "priority": "high|medium|low"}}
+    {{"title": "opportunity label", "detail": "why it matters for a client conversation", "priority": "high|medium|low", "sources": ["[1] article title or source cue"]}}
   ],
   "risks": [
-    {{"title": "risk label", "detail": "why it matters", "severity": "high|medium|low"}}
+    {{"title": "risk label", "detail": "why it matters", "severity": "high|medium|low", "sources": ["[2] article title or source cue"]}}
   ],
   "recommendations": [
-    {{"action": "what the partner should do/prepare", "rationale": "why this helps the conversation"}}
+    {{"action": "what the partner should do/prepare", "rationale": "why this helps the conversation", "sources": ["[1] article title or source cue"]}}
   ],
   "conversation_starters": [
     "sharp question or talking point a partner can use in the first 10 minutes"
@@ -122,8 +133,120 @@ Return JSON with this exact shape:
 Constraints:
 - Include 3-5 key_themes, 2-4 opportunities, 2-4 risks, 3-5 recommendations, 3-5 conversation_starters.
 - Be specific to {company_name}.
+- For every opportunity, risk, and recommendation, include 1-3 `sources` that cite the news corpus using article numbers/titles from above.
 - For leadership_fill: ONLY fill names you are confident are current; otherwise use null. Do not invent.
 """
+
+EXPAND_SYSTEM_PROMPT = """You are Company Insights Dig-Deeper Agent, a specialist subagent that \
+expands one selected insight for a management consulting partner.
+
+Rules:
+- Ground every claim in the provided news corpus and the selected item. Do not invent facts.
+- If evidence is thin, say so explicitly.
+- Write for a busy partner who liked this item and wants more usable depth.
+- Output ONLY valid JSON. No markdown fences.
+"""
+
+DEEP_EXPAND_SYSTEM_PROMPT = """You are Company Insights Deep-Dive Agent, a second-pass specialist \
+subagent. Your job is to re-explain a selected insight more slowly, more verbosely, and more \
+clearly for a partner who still does not fully understand the story.
+
+Rules:
+- Ground every claim in the provided news corpus and prior analysis. Do not invent facts.
+- Be explicit, concrete, and educational — unpack jargon and cause/effect.
+- Call out the most important facts that must not be missed.
+- Output ONLY valid JSON. No markdown fences.
+"""
+
+
+def _articles_prompt_block(articles: list[NewsArticle]) -> str:
+    blocks = []
+    for idx, article in enumerate(articles, start=1):
+        blocks.append(
+            "\n".join(
+                [
+                    f"[{idx}] Title: {article.title}",
+                    f"    Source: {article.source or 'Unknown'}",
+                    f"    Published: {article.published_at or 'Unknown'}",
+                    f"    Description: {article.description or 'N/A'}",
+                    f"    URL: {article.url or 'N/A'}",
+                ]
+            )
+        )
+    return "\n\n".join(blocks) if blocks else "No articles available."
+
+
+def match_item_sources(
+    item: dict[str, Any],
+    articles: list[NewsArticle],
+    *,
+    limit: int = 4,
+) -> list[dict[str, Any]]:
+    """Match source cues on an insight item to articles in the brief corpus."""
+    cues: list[str] = []
+    for key in ("sources", "evidence"):
+        raw = item.get(key) or []
+        if isinstance(raw, list):
+            cues.extend(str(cue) for cue in raw if cue)
+
+    heading = str(item.get("title") or item.get("action") or "")
+    detail = str(item.get("detail") or item.get("rationale") or "")
+    search_blob = f"{heading} {detail}".lower()
+
+    scored: list[tuple[int, dict[str, Any]]] = []
+    for idx, article in enumerate(articles, start=1):
+        title = article.title or ""
+        title_l = title.lower()
+        source_l = (article.source or "").lower()
+        score = 0
+
+        for cue in cues:
+            cue_l = cue.lower()
+            # Accept "[1] Title..." style citations
+            if f"[{idx}]" in cue_l or cue_l.strip() == str(idx):
+                score += 8
+            if title_l and (title_l in cue_l or cue_l in title_l):
+                score += 6
+            if source_l and source_l in cue_l:
+                score += 2
+
+        # Soft keyword overlap for older briefs without sources[]
+        title_tokens = [tok for tok in re.findall(r"[a-z0-9]{4,}", title_l) if tok not in {"with", "from", "that", "this"}]
+        overlap = sum(1 for tok in title_tokens if tok in search_blob)
+        if overlap >= 2:
+            score += overlap
+
+        if score > 0:
+            scored.append(
+                (
+                    score,
+                    {
+                        "title": article.title,
+                        "source": article.source,
+                        "url": article.url,
+                        "published_at": article.published_at,
+                        "description": article.description,
+                    },
+                )
+            )
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    matched = [payload for _, payload in scored[:limit]]
+    if matched:
+        return matched
+
+    # Last resort: top articles from the brief so the UI still has somewhere to look
+    return [
+        {
+            "title": article.title,
+            "source": article.source,
+            "url": article.url,
+            "published_at": article.published_at,
+            "description": article.description,
+        }
+        for article in articles[: min(2, len(articles))]
+    ]
+
 
 
 class InsightsAgent:
@@ -171,6 +294,263 @@ class InsightsAgent:
             )
             fallback["_fallback"] = True
             return fallback
+
+    def expand_item(
+        self,
+        *,
+        company_name: str,
+        kind: str,
+        item: dict[str, Any],
+        articles: list[NewsArticle],
+        depth: str = "standard",
+        prior_analysis: str | None = None,
+    ) -> dict[str, Any]:
+        sources = match_item_sources(item, articles)
+        heading = str(item.get("title") or item.get("action") or "Selected insight")
+        detail = str(item.get("detail") or item.get("rationale") or "")
+        is_deep = depth == "deep"
+
+        if not self._client:
+            return self._fallback_expand(
+                company_name=company_name,
+                kind=kind,
+                heading=heading,
+                detail=detail,
+                sources=sources,
+                depth=depth,
+                prior_analysis=prior_analysis,
+            )
+
+        if is_deep:
+            prior_block = prior_analysis.strip() if prior_analysis else "No prior dig-deeper analysis provided."
+            user_prompt = f"""Company: {company_name}
+Selected item type: {kind}
+Selected heading: {heading}
+Selected detail: {detail}
+Priority/severity: {item.get("priority") or item.get("severity") or "n/a"}
+Cited source cues: {item.get("sources") or item.get("evidence") or []}
+
+Prior dig-deeper analysis (the partner still does not fully understand — go deeper):
+{prior_block}
+
+News corpus:
+{_articles_prompt_block(articles)}
+
+Return JSON with this exact shape:
+{{
+  "detailed_narrative": "8-14 sentences. Slow, verbose, plain-English explanation of the story: what happened, why it matters, how the pieces connect, and what a partner should take away.",
+  "spotlight_points": [
+    {{
+      "point": "short high-signal fact or phrase that must stand out",
+      "explanation": "1-2 sentences explaining why this point matters"
+    }}
+  ],
+  "source_cues": ["article titles or [n] refs from the corpus that support this deep dive"]
+}}
+
+Constraints:
+- Be more detailed and more verbose than a normal brief.
+- Assume the reader is smart but missing context; unpack the story step by step.
+- Include 4-7 spotlight_points that capture the most important facts/claims.
+- Prefer evidence from the corpus over general knowledge.
+- If the corpus is thin, say so and keep claims conservative.
+"""
+            system_prompt = DEEP_EXPAND_SYSTEM_PROMPT
+            temperature = 0.3
+        else:
+            user_prompt = f"""Company: {company_name}
+Selected item type: {kind}
+Selected heading: {heading}
+Selected detail: {detail}
+Priority/severity: {item.get("priority") or item.get("severity") or "n/a"}
+Cited source cues: {item.get("sources") or item.get("evidence") or []}
+
+News corpus:
+{_articles_prompt_block(articles)}
+
+Return JSON with this exact shape:
+{{
+  "deeper_analysis": "4-7 sentences expanding the selected item with more nuance, evidence, and commercial implication",
+  "why_it_matters": "2-3 sentences on why a partner should care in the client conversation",
+  "questions_to_ask": ["2-4 sharp questions to ask the client about this item"],
+  "suggested_moves": ["2-4 concrete next moves or prep actions tied to this item"],
+  "source_cues": ["article titles or [n] refs from the corpus that support this expansion"]
+}}
+
+Constraints:
+- Stay tightly focused on the selected item.
+- Prefer evidence from the corpus over general knowledge.
+- If the corpus is thin for this item, say so and keep claims conservative.
+"""
+            system_prompt = EXPAND_SYSTEM_PROMPT
+            temperature = 0.25
+
+        try:
+            response = self._client.chat.completions.create(
+                model=self.settings.llm_model,
+                temperature=temperature,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            content = response.choices[0].message.content
+            if not content:
+                raise InsightsAgentError("Empty expand LLM response")
+            data = self._parse_expand_json(content)
+            expanded_sources = match_item_sources(
+                {"sources": data.get("source_cues") or [], "title": heading, "detail": detail},
+                articles,
+            )
+            if is_deep:
+                spotlight_raw = data.get("spotlight_points") or []
+                spotlight_points = []
+                for point in spotlight_raw:
+                    if not isinstance(point, dict):
+                        continue
+                    label = str(point.get("point") or "").strip()
+                    explanation = str(point.get("explanation") or "").strip()
+                    if label and explanation:
+                        spotlight_points.append({"point": label, "explanation": explanation})
+                narrative = str(data.get("detailed_narrative") or "").strip()
+                return {
+                    "heading": heading,
+                    "deeper_analysis": narrative,
+                    "why_it_matters": "",
+                    "questions_to_ask": [],
+                    "suggested_moves": [],
+                    "detailed_narrative": narrative,
+                    "spotlight_points": spotlight_points,
+                    "sources": expanded_sources or sources,
+                    "fallback": False,
+                }
+
+            return {
+                "heading": heading,
+                "deeper_analysis": data.get("deeper_analysis") or "",
+                "why_it_matters": data.get("why_it_matters") or "",
+                "questions_to_ask": data.get("questions_to_ask") or [],
+                "suggested_moves": data.get("suggested_moves") or [],
+                "detailed_narrative": None,
+                "spotlight_points": [],
+                "sources": expanded_sources or sources,
+                "fallback": False,
+            }
+        except Exception:
+            logger.exception(
+                "Expand subagent failed company=%r kind=%s depth=%s",
+                company_name,
+                kind,
+                depth,
+            )
+            result = self._fallback_expand(
+                company_name=company_name,
+                kind=kind,
+                heading=heading,
+                detail=detail,
+                sources=sources,
+                depth=depth,
+                prior_analysis=prior_analysis,
+            )
+            result["fallback"] = True
+            return result
+
+    def _fallback_expand(
+        self,
+        *,
+        company_name: str,
+        kind: str,
+        heading: str,
+        detail: str,
+        sources: list[dict[str, Any]],
+        depth: str = "standard",
+        prior_analysis: str | None = None,
+    ) -> dict[str, Any]:
+        source_titles = [str(item.get("title")) for item in sources if item.get("title")]
+        evidence_line = (
+            f"Supporting coverage includes: {'; '.join(source_titles[:3])}."
+            if source_titles
+            else f"Recent public coverage for {company_name} is limited for this item."
+        )
+        if depth == "deep":
+            prior = (prior_analysis or "").strip()
+            narrative = (
+                f"Here is a slower read of '{heading}' for {company_name}. "
+                f"In plain terms: {detail} {evidence_line} "
+                "Think of this as a chain: public signal → commercial implication → client question. "
+                "If the first dig-deeper pass felt dense, focus first on what changed, then who is affected, "
+                "then what a partner should ask next. "
+                + (f"Building from the earlier brief: {prior[:500]}" if prior else "")
+            )
+            return {
+                "heading": heading,
+                "deeper_analysis": narrative,
+                "why_it_matters": "",
+                "questions_to_ask": [],
+                "suggested_moves": [],
+                "detailed_narrative": narrative,
+                "spotlight_points": [
+                    {
+                        "point": heading,
+                        "explanation": "This is the core storyline the partner selected; keep it as the anchor.",
+                    },
+                    {
+                        "point": "Confirm materiality with the client",
+                        "explanation": (
+                            "Public news can lag internal decisions, so verify whether this issue is live "
+                            f"on the {company_name} agenda before over-investing."
+                        ),
+                    },
+                    {
+                        "point": "Use one source as proof",
+                        "explanation": evidence_line,
+                    },
+                ],
+                "sources": sources,
+                "fallback": True,
+            }
+
+        return {
+            "heading": heading,
+            "deeper_analysis": (
+                f"{heading} — {detail} {evidence_line} "
+                "Treat this as a working hypothesis: confirm with the client what is current internally "
+                "and which commercial implication matters most for the next 90 days."
+            ),
+            "why_it_matters": (
+                f"This {kind} is useful because it gives the partner a concrete storyline to pressure-test "
+                f"in the {company_name} conversation instead of staying at headline level."
+            ),
+            "questions_to_ask": [
+                f"How material is '{heading}' to the current {company_name} agenda?",
+                "What would change your view if this signal turned out to be overstated?",
+                "Where should we prioritize follow-up evidence before the next discussion?",
+            ],
+            "suggested_moves": [
+                "Open with a 30-second restatement of the item and ask the client to correct it.",
+                "Bring one source article and one commercial implication into the room.",
+                "Propose a short follow-up workstream only if the client confirms the issue is live.",
+            ],
+            "detailed_narrative": None,
+            "spotlight_points": [],
+            "sources": sources,
+            "fallback": True,
+        }
+
+    @staticmethod
+    def _parse_expand_json(content: str) -> dict[str, Any]:
+        cleaned = content.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+            cleaned = re.sub(r"\s*```$", "", cleaned)
+        try:
+            data = json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            raise InsightsAgentError("Expand LLM returned invalid JSON") from exc
+        if not isinstance(data, dict):
+            raise InsightsAgentError("Expand LLM returned non-object JSON")
+        return data
 
     def _call_llm(
         self,
@@ -293,11 +673,13 @@ class InsightsAgent:
                         "initiatives leadership is already publicly signaling."
                     ),
                     "priority": "high",
+                    "sources": titles[:2],
                 },
                 {
                     "title": "Proof points",
                     "detail": "Bring one external benchmark or peer case for each major theme.",
                     "priority": "medium",
+                    "sources": titles[:1],
                 },
             ],
             "risks": [
@@ -305,25 +687,30 @@ class InsightsAgent:
                     "title": "Stale narrative",
                     "detail": "News can lag internal decisions; confirm with the client what is current.",
                     "severity": "medium",
+                    "sources": titles[:1],
                 },
                 {
                     "title": "Over-generalization",
                     "detail": "Avoid treating headlines as strategy; ask for confirmation of priorities.",
                     "severity": "high",
+                    "sources": titles[:2],
                 },
             ],
             "recommendations": [
                 {
                     "action": f"Open with a 60-second {company_name} insights brief",
                     "rationale": "Signals preparation and invites the client to correct or deepen the narrative.",
+                    "sources": titles[:2],
                 },
                 {
                     "action": "Pick two themes and attach a commercial implication to each",
                     "rationale": "Keeps the meeting outcome-oriented rather than news-recap oriented.",
+                    "sources": titles[:1],
                 },
                 {
                     "action": "Close with one prioritized next-step hypothesis",
                     "rationale": "Creates a natural path to follow-on work.",
+                    "sources": titles[:1],
                 },
             ],
             "conversation_starters": [

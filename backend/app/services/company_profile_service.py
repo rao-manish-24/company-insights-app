@@ -51,6 +51,7 @@ def empty_profile() -> dict[str, Any]:
         ],
         "source": None,
         "source_url": None,
+        "market": None,
     }
 
 

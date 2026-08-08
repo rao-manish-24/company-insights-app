@@ -7,10 +7,18 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.core.rate_limit import RateLimitError, analyze_singleflight, refresh_rate_limiter
 from app.models.company import CompanyAnalysis
-from app.models.schemas import CompanyAnalysisResponse
+from app.core.exceptions import NotFoundError
+from app.models.schemas import (
+    CompanyAnalysisResponse,
+    ExpandInsightResponse,
+    ExpandInsightSource,
+    NewsArticle,
+    SpotlightPoint,
+)
 from app.repositories.analysis_repository import AnalysisRepository, normalize_company_name
 from app.services.company_profile_service import CompanyProfileService, empty_profile
 from app.services.insights_agent import InsightsAgent
+from app.services.market_data_service import MarketDataService
 from app.services.news_service import NewsService
 
 logger = logging.getLogger(__name__)
@@ -51,6 +59,7 @@ class AnalysisService:
         news_service: NewsService | None = None,
         insights_agent: InsightsAgent | None = None,
         profile_service: CompanyProfileService | None = None,
+        market_service: MarketDataService | None = None,
         settings: Settings | None = None,
     ) -> None:
         self.settings = settings or get_settings()
@@ -58,6 +67,7 @@ class AnalysisService:
         self.news_service = news_service or NewsService(self.settings)
         self.insights_agent = insights_agent or InsightsAgent(self.settings)
         self.profile_service = profile_service or CompanyProfileService(self.settings)
+        self.market_service = market_service or MarketDataService()
 
     def peek_cache(self, company_name: str) -> CompanyAnalysisResponse | None:
         cleaned_name = " ".join(company_name.strip().split())
@@ -155,9 +165,13 @@ class AnalysisService:
         articles = await self.news_service.fetch_company_news(cleaned_name)
         logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
 
-        profile = await asyncio.to_thread(self.profile_service.fetch_profile, cleaned_name)
+        profile, market = await asyncio.gather(
+            asyncio.to_thread(self.profile_service.fetch_profile, cleaned_name),
+            asyncio.to_thread(self.market_service.fetch_market, cleaned_name),
+        )
         if not profile:
             profile = empty_profile()
+        profile = self.market_service.apply_to_profile(profile, market)
 
         insights = await asyncio.to_thread(
             self.insights_agent.analyze,
@@ -220,3 +234,81 @@ class AnalysisService:
         deleted = self.repo.delete_all()
         logger.info("Cleared analysis history deleted=%s", deleted)
         return deleted
+
+    async def expand_insight(
+        self,
+        analysis_id: int,
+        *,
+        kind: str,
+        index: int,
+        depth: str = "standard",
+        prior_analysis: str | None = None,
+    ) -> ExpandInsightResponse:
+        row = self.repo.get_by_id(analysis_id)
+        if not row:
+            raise NotFoundError("Analysis not found")
+
+        collection_map = {
+            "opportunity": list(row.opportunities or []),
+            "risk": list(row.risks or []),
+            "recommendation": list(row.recommendations or []),
+        }
+        collection = collection_map.get(kind) or []
+        if index < 0 or index >= len(collection):
+            raise NotFoundError("Insight item not found")
+
+        raw_item = collection[index]
+        item = raw_item if isinstance(raw_item, dict) else {}
+        articles = [
+            NewsArticle.model_validate(article)
+            for article in (row.articles or [])
+            if isinstance(article, dict)
+        ]
+
+        result = await asyncio.to_thread(
+            self.insights_agent.expand_item,
+            company_name=row.company_name,
+            kind=kind,
+            item=item,
+            articles=articles,
+            depth=depth,
+            prior_analysis=prior_analysis,
+        )
+
+        sources = [
+            ExpandInsightSource.model_validate(source)
+            for source in (result.get("sources") or [])
+            if isinstance(source, dict) and source.get("title")
+        ]
+        spotlight_points = [
+            SpotlightPoint.model_validate(point)
+            for point in (result.get("spotlight_points") or [])
+            if isinstance(point, dict) and point.get("point") and point.get("explanation")
+        ]
+
+        logger.info(
+            "Expanded insight analysis_id=%s kind=%s index=%s depth=%s sources=%s fallback=%s",
+            analysis_id,
+            kind,
+            index,
+            depth,
+            len(sources),
+            result.get("fallback"),
+        )
+
+        return ExpandInsightResponse(
+            kind=kind,
+            index=index,
+            depth=depth,
+            heading=str(result.get("heading") or item.get("title") or item.get("action") or ""),
+            deeper_analysis=str(result.get("deeper_analysis") or ""),
+            why_it_matters=str(result.get("why_it_matters") or ""),
+            questions_to_ask=[str(q) for q in (result.get("questions_to_ask") or []) if q],
+            suggested_moves=[str(m) for m in (result.get("suggested_moves") or []) if m],
+            detailed_narrative=(
+                str(result["detailed_narrative"]) if result.get("detailed_narrative") else None
+            ),
+            spotlight_points=spotlight_points,
+            sources=sources,
+            fallback=bool(result.get("fallback")),
+        )

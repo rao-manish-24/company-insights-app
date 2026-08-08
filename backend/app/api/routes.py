@@ -16,6 +16,8 @@ from app.models.schemas import (
     CompanyAnalysisResponse,
     EmailBriefRequest,
     EmailBriefResponse,
+    ExpandInsightRequest,
+    ExpandInsightResponse,
     HealthResponse,
 )
 from app.services.analysis_service import AnalysisService
@@ -96,6 +98,21 @@ async def analyze_company(
                 logger.exception("Auto-email failed id=%s", result.id)
 
     return result
+
+
+@router.post("/analyses/{analysis_id}/expand", response_model=ExpandInsightResponse)
+async def expand_insight(
+    analysis_id: int,
+    payload: ExpandInsightRequest,
+    service: AnalysisService = Depends(get_analysis_service),
+) -> ExpandInsightResponse:
+    return await service.expand_insight(
+        analysis_id,
+        kind=payload.kind,
+        index=payload.index,
+        depth=payload.depth,
+        prior_analysis=payload.prior_analysis,
+    )
 
 
 @router.post("/analyses/{analysis_id}/email", response_model=EmailBriefResponse)

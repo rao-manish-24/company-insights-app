@@ -88,6 +88,21 @@ def _profile_html(profile: dict[str, Any]) -> str:
         for label, value in rows
         if value
     )
+    market = profile.get("market") if isinstance(profile.get("market"), dict) else {}
+    market_rows = [
+        ("Ticker", market.get("ticker")),
+        ("Price", market.get("price")),
+        ("Change", market.get("change_percent")),
+        ("Market cap", market.get("market_cap")),
+        ("P/E", market.get("pe_ratio")),
+        ("Sector", market.get("sector")),
+        ("Industry", market.get("industry")),
+    ]
+    market_facts = "".join(
+        f"<li><strong>{escape(label)}</strong> — {escape(str(value))}</li>"
+        for label, value in market_rows
+        if value
+    )
     people_bits = []
     for person in profile.get("key_people") or []:
         if isinstance(person, dict) and person.get("name"):
@@ -95,7 +110,7 @@ def _profile_html(profile: dict[str, Any]) -> str:
                 f"<li><strong>{escape(str(person.get('role')))}</strong> — "
                 f"{escape(str(person.get('name')))}</li>"
             )
-    if not facts and not people_bits:
+    if not facts and not people_bits and not market_facts:
         return ""
     people_block = (
         f"<h3 style='font-family:Georgia,serif;color:#0b1f33;font-weight:400'>Key people</h3>"
@@ -103,14 +118,26 @@ def _profile_html(profile: dict[str, Any]) -> str:
         if people_bits
         else ""
     )
-    source = profile.get("source_url") or profile.get("source") or ""
+    market_block = (
+        f"<h3 style='font-family:Georgia,serif;color:#0b1f33;font-weight:400'>Market snapshot</h3>"
+        f"<ul style='line-height:1.55;color:#1c3348'>{market_facts}</ul>"
+        if market_facts
+        else ""
+    )
+    sources = []
+    if profile.get("source_url") or profile.get("source"):
+        sources.append(str(profile.get("source_url") or profile.get("source")))
+    if market.get("source_url") or market.get("source"):
+        sources.append(str(market.get("source_url") or market.get("source")))
     source_line = (
-        f"<p style='color:#5b7186;font-size:12px'>Source: {escape(str(source))}</p>" if source else ""
+        f"<p style='color:#5b7186;font-size:12px'>Sources: {escape(' · '.join(sources))}</p>"
+        if sources
+        else ""
     )
     return (
         "<h2 style='font-family:Georgia,serif;color:#0b1f33;font-weight:400'>Company snapshot</h2>"
         f"<ul style='line-height:1.55;color:#1c3348'>{facts}</ul>"
-        f"{people_block}{source_line}"
+        f"{market_block}{people_block}{source_line}"
     )
 
 
@@ -167,6 +194,22 @@ def build_brief_text(analysis: CompanyAnalysis) -> str:
         value = profile.get(key)
         if value:
             lines.append(f"- {label}: {value}")
+    market = profile.get("market") if isinstance(profile.get("market"), dict) else {}
+    if market.get("ticker"):
+        lines.append("")
+        lines.append("Market snapshot:")
+        for label, key in [
+            ("Ticker", "ticker"),
+            ("Price", "price"),
+            ("Change", "change_percent"),
+            ("Market cap", "market_cap"),
+            ("P/E", "pe_ratio"),
+            ("Sector", "sector"),
+            ("Industry", "industry"),
+        ]:
+            value = market.get(key)
+            if value:
+                lines.append(f"- {label}: {value}")
     for person in profile.get("key_people") or []:
         if isinstance(person, dict) and person.get("name"):
             lines.append(f"- {person.get('role')}: {person.get('name')}")

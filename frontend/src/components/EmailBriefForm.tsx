@@ -33,7 +33,8 @@ export function EmailBriefForm({ analysisId }: Props) {
         <h2>Send to inbox</h2>
       </div>
       <p className="email-hint">
-        Email Company Insights brief to yourself. Leave blank to use the default email address set.
+        Send this brief to your inbox before the meeting. Leave blank to use the default address
+        configured on the server.
       </p>
       <form className="email-row" onSubmit={onSubmit}>
         <input

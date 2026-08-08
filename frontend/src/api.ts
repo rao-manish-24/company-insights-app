@@ -1,5 +1,10 @@
 import { API_BASE, REQUEST_TIMEOUT_MS } from './config'
-import type { AnalysisListItem, CompanyAnalysis } from './types'
+import type {
+  AnalysisListItem,
+  CompanyAnalysis,
+  ExpandInsightKind,
+  ExpandInsightResult,
+} from './types'
 
 export class ApiError extends Error {
   status: number
@@ -105,5 +110,22 @@ export function emailAnalysis(id: number, to?: string): Promise<EmailBriefResult
   return request<EmailBriefResult>(`/analyses/${id}/email`, {
     method: 'POST',
     body: JSON.stringify(to ? { to } : {}),
+  })
+}
+
+export function expandInsight(
+  analysisId: number,
+  kind: ExpandInsightKind,
+  index: number,
+  options?: { depth?: 'standard' | 'deep'; priorAnalysis?: string },
+): Promise<ExpandInsightResult> {
+  return request<ExpandInsightResult>(`/analyses/${analysisId}/expand`, {
+    method: 'POST',
+    body: JSON.stringify({
+      kind,
+      index,
+      depth: options?.depth || 'standard',
+      prior_analysis: options?.priorAnalysis || undefined,
+    }),
   })
 }
