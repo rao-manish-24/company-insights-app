@@ -36,6 +36,18 @@ function EmptyHint({ label }: { label: string }) {
 
 export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
   const [showEmail, setShowEmail] = useState(false)
+  const profile = analysis.company_profile
+  const factRows = (
+    [
+      ['Founded', profile?.founded],
+      ['Headquarters', profile?.headquarters],
+      ['Employees', profile?.employees],
+      ['Parent company', profile?.parent_company],
+      ['Revenue', profile?.revenue],
+      ['Operating income', profile?.operating_income],
+      ['Total assets', profile?.total_assets],
+    ] as const
+  ).filter(([, value]) => Boolean(value))
 
   return (
     <article className="brief">
@@ -47,12 +59,12 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
             <time dateTime={analysis.created_at}>
               {new Date(analysis.created_at).toLocaleString()}
             </time>
-            <span aria-hidden="true">·</span>
+            <span className="meta-sep" aria-hidden="true" />
             <span>{analysis.llm_model}</span>
             {analysis.cached && (
               <>
-                <span aria-hidden="true">·</span>
-                <span>Cached</span>
+                <span className="meta-sep" aria-hidden="true" />
+                <span className="meta-pill">Cached</span>
               </>
             )}
           </div>
@@ -72,6 +84,7 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
       </header>
 
       <section className="brief-section brief-section--summary">
+        <p className="section-label">At a glance</p>
         <p className="summary">{analysis.executive_summary}</p>
       </section>
 
@@ -81,45 +94,43 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
         </section>
       )}
 
-      {profileHasContent(analysis.company_profile) && (
-        <section className="brief-section">
+      {profileHasContent(profile) && (
+        <section className="brief-section brief-section--profile">
           <div className="brief-section-head">
             <p className="section-label">Company snapshot</p>
             <h2>Profile & leadership</h2>
           </div>
-          <div className="profile-grid">
-            {(
-              [
-                ['Founded', analysis.company_profile?.founded],
-                ['Headquarters', analysis.company_profile?.headquarters],
-                ['Employees', analysis.company_profile?.employees],
-                ['Parent company', analysis.company_profile?.parent_company],
-                ['Revenue', analysis.company_profile?.revenue],
-                ['Operating income', analysis.company_profile?.operating_income],
-                ['Total assets', analysis.company_profile?.total_assets],
-              ] as const
-            ).map(([label, value]) =>
-              value ? (
-                <div className="profile-fact" key={label}>
-                  <span className="profile-fact-label">{label}</span>
-                  <strong>{value}</strong>
+
+          {factRows.length > 0 && (
+            <dl className="fact-table">
+              {factRows.map(([label, value]) => (
+                <div className="fact-row" key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
                 </div>
-              ) : null,
-            )}
+              ))}
+            </dl>
+          )}
+
+          <div className="leadership-block">
+            <p className="subsection-label">Key people</p>
+            <ul className="leadership-grid">
+              {(profile?.key_people || []).map((person) => (
+                <li key={person.role}>
+                  <span>{person.role}</span>
+                  <strong className={person.name ? '' : 'is-empty'}>
+                    {person.name || 'Not available'}
+                  </strong>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="people-list">
-            {(analysis.company_profile?.key_people || []).map((person) => (
-              <div className="people-item" key={person.role}>
-                <span className="profile-fact-label">{person.role}</span>
-                <strong>{person.name || 'Not available'}</strong>
-              </div>
-            ))}
-          </div>
-          {analysis.company_profile?.source_url && (
+
+          {profile?.source_url && (
             <p className="profile-source">
               Source:{' '}
-              <a href={analysis.company_profile.source_url} target="_blank" rel="noopener noreferrer">
-                {analysis.company_profile.source || 'Wikidata'}
+              <a href={profile.source_url} target="_blank" rel="noopener noreferrer">
+                {profile.source || 'Wikidata'}
               </a>
             </p>
           )}
@@ -140,8 +151,10 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
                 <span className="index-mark" aria-hidden="true">
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                <h3>{theme.theme}</h3>
-                <p>{theme.insight}</p>
+                <div>
+                  <h3>{theme.theme}</h3>
+                  <p>{theme.insight}</p>
+                </div>
               </article>
             ))}
           </div>
@@ -150,7 +163,7 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
 
       <section className="brief-section">
         <div className="split-board">
-          <div>
+          <div className="split-pane">
             <div className="brief-section-head">
               <p className="section-label">Upside</p>
               <h2>Opportunities</h2>
@@ -172,7 +185,7 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
             )}
           </div>
 
-          <div>
+          <div className="split-pane split-pane--risk">
             <div className="brief-section-head">
               <p className="section-label">Watchouts</p>
               <h2>Risks</h2>
@@ -180,7 +193,7 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
             {analysis.risks.length === 0 ? (
               <EmptyHint label="risks" />
             ) : (
-              <ul className="signal-list signal-list--risk">
+              <ul className="signal-list">
                 {analysis.risks.map((item, index) => (
                   <li key={`${item.title}-${index}`}>
                     <div className="signal-title-row">
