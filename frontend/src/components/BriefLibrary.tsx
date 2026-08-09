@@ -27,9 +27,9 @@ interface Props {
   historyLoading: boolean
   historyLoaded: boolean
   loading: boolean
-  onLoadHistory: () => void | Promise<void>
-  onClearHistory: () => void | Promise<void>
-  onOpenRecent: (id: number) => void | Promise<void>
+  onLoadHistory: () => void | Promise<unknown>
+  onClearHistory: () => void | Promise<unknown>
+  onOpenRecent: (id: number) => void | Promise<unknown>
   /** Home: show expand/collapse. Insights: always open. */
   collapsible?: boolean
   defaultExpanded?: boolean
