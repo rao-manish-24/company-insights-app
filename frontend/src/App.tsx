@@ -1,4 +1,5 @@
 import { type FormEvent } from 'react'
+import { AnalysisProgress } from './components/AnalysisProgress'
 import { InsightsPanel } from './components/InsightsPanel'
 import { useCompanyInsights } from './hooks/useCompanyInsights'
 
@@ -32,6 +33,8 @@ function App() {
     historyLoading,
     historyLoaded,
     loading,
+    loadingMode,
+    runMetrics,
     runAnalysis,
     openRecent,
     loadHistory,
@@ -111,17 +114,11 @@ function App() {
           </form>
 
           <div className={`status-line ${error ? 'error' : ''}`} role="status" aria-live="polite">
-            {loading && (
-              <span className="loading">
-                <span className="spinner" aria-hidden="true" />
-                <span className="loading-copy">
-                  <strong>Building the brief</strong>
-                  <span>News intake → insight agent → structured recommendations</span>
-                </span>
-              </span>
+            {(loading || runMetrics) && !error && (
+              <AnalysisProgress active={loading} mode={loadingMode} metrics={runMetrics} />
             )}
             {!loading && error}
-            {!loading && !error && analysis?.cached && (
+            {!loading && !error && analysis?.cached && !runMetrics && (
               <span className="status-cached">
                 Showing a recent cached brief for this company. Refresh for a new pull.
               </span>

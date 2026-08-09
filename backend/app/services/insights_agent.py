@@ -26,6 +26,39 @@ class LlmRateLimitError(InsightsAgentError):
     pass
 
 
+def _extract_usage(usage: Any) -> dict[str, int]:
+    """Normalize OpenAI / xAI / gateway usage payloads into token counts."""
+    if usage is None:
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+    if isinstance(usage, dict):
+        raw = usage
+    elif hasattr(usage, "model_dump"):
+        raw = usage.model_dump()
+    elif hasattr(usage, "dict"):
+        raw = usage.dict()
+    else:
+        raw = {
+            "prompt_tokens": getattr(usage, "prompt_tokens", None),
+            "completion_tokens": getattr(usage, "completion_tokens", None),
+            "total_tokens": getattr(usage, "total_tokens", None),
+            "input_tokens": getattr(usage, "input_tokens", None),
+            "output_tokens": getattr(usage, "output_tokens", None),
+        }
+
+    prompt_tokens = int(raw.get("prompt_tokens") or raw.get("input_tokens") or 0)
+    completion_tokens = int(raw.get("completion_tokens") or raw.get("output_tokens") or 0)
+    total_tokens = int(raw.get("total_tokens") or 0)
+    if total_tokens <= 0:
+        total_tokens = prompt_tokens + completion_tokens
+
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
+    }
+
+
 SYSTEM_PROMPT = """You are Company Insights Agent, a senior strategy analyst supporting \
 management consulting partners preparing for client conversations.
 
@@ -596,19 +629,44 @@ Constraints:
                 raise InsightsAgentError("Empty LLM response")
 
             elapsed_ms = (time.perf_counter() - started) * 1000
-            usage = getattr(response, "usage", None)
-            if usage:
+            usage_counts = _extract_usage(getattr(response, "usage", None))
+            prompt_tokens = usage_counts["prompt_tokens"]
+            completion_tokens = usage_counts["completion_tokens"]
+            total_tokens = usage_counts["total_tokens"]
+
+            # Some gateways omit usage; estimate so the UI still has a useful signal.
+            if total_tokens <= 0:
+                system_chars = len(SYSTEM_PROMPT)
+                user_chars = len(_build_user_prompt(company_name, articles, profile=profile))
+                prompt_tokens = max(1, (system_chars + user_chars) // 4)
+                completion_tokens = max(1, len(content) // 4)
+                total_tokens = prompt_tokens + completion_tokens
+                logger.info(
+                    "LLM call complete company=%r elapsed_ms=%.1f tokens_estimated=%s "
+                    "(prompt≈%s completion≈%s)",
+                    company_name,
+                    elapsed_ms,
+                    total_tokens,
+                    prompt_tokens,
+                    completion_tokens,
+                )
+            else:
                 logger.info(
                     "LLM call complete company=%r elapsed_ms=%.1f prompt_tokens=%s completion_tokens=%s",
                     company_name,
                     elapsed_ms,
-                    getattr(usage, "prompt_tokens", "?"),
-                    getattr(usage, "completion_tokens", "?"),
+                    prompt_tokens,
+                    completion_tokens,
                 )
-            else:
-                logger.info("LLM call complete company=%r elapsed_ms=%.1f", company_name, elapsed_ms)
 
-            return self._parse_json(content)
+            data = self._parse_json(content)
+            data["_usage"] = {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "llm_elapsed_ms": round(elapsed_ms, 1),
+            }
+            return data
 
         return _invoke()
 

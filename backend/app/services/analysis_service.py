@@ -77,7 +77,13 @@ class AnalysisService:
         if not cached:
             return None
         return CompanyAnalysisResponse.model_validate(cached, from_attributes=True).model_copy(
-            update={"cached": True}
+            update={
+                "cached": True,
+                "elapsed_ms": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            }
         )
 
     async def analyze(self, company_name: str, force_refresh: bool = False) -> CompanyAnalysisResponse:
@@ -124,7 +130,13 @@ class AnalysisService:
                         latest.id,
                     )
                     return CompanyAnalysisResponse.model_validate(latest, from_attributes=True).model_copy(
-                        update={"cached": True}
+                        update={
+                            "cached": True,
+                            "elapsed_ms": 0,
+                            "prompt_tokens": 0,
+                            "completion_tokens": 0,
+                            "total_tokens": 0,
+                        }
                     )
                 if is_fallback:
                     logger.info(
@@ -159,7 +171,13 @@ class AnalysisService:
             if cached:
                 logger.info("Cache filled during wait company=%r analysis_id=%s", cleaned_name, cached.id)
                 return CompanyAnalysisResponse.model_validate(cached, from_attributes=True).model_copy(
-                    update={"cached": True}
+                    update={
+                        "cached": True,
+                        "elapsed_ms": 0,
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0,
+                    }
                 )
 
         articles = await self.news_service.fetch_company_news(cleaned_name)
@@ -180,17 +198,24 @@ class AnalysisService:
             profile,
         )
         used_fallback = bool(insights.pop("_fallback", False))
+        usage_raw = insights.pop("_usage", None)
+        usage = usage_raw if isinstance(usage_raw, dict) else {}
         model_name = "fallback-heuristic" if used_fallback else self.settings.llm_model
         leadership_fill = insights.pop("leadership_fill", None)
         profile = _merge_leadership(profile, leadership_fill)
 
+        prompt_tokens = int(usage.get("prompt_tokens") or 0)
+        completion_tokens = int(usage.get("completion_tokens") or 0)
+        total_tokens = int(usage.get("total_tokens") or (prompt_tokens + completion_tokens))
+
         logger.info(
-            "Insights ready company=%r themes=%s opportunities=%s risks=%s fallback=%s",
+            "Insights ready company=%r themes=%s opportunities=%s risks=%s fallback=%s tokens=%s",
             cleaned_name,
             len(insights.get("key_themes", [])),
             len(insights.get("opportunities", [])),
             len(insights.get("risks", [])),
             used_fallback,
+            total_tokens,
         )
 
         record = CompanyAnalysis(
@@ -210,15 +235,22 @@ class AnalysisService:
 
         elapsed_ms = (time.perf_counter() - started) * 1000
         logger.info(
-            "Pipeline complete company=%r analysis_id=%s model=%s elapsed_ms=%.1f",
+            "Pipeline complete company=%r analysis_id=%s model=%s elapsed_ms=%.1f tokens=%s",
             cleaned_name,
             record.id,
             record.llm_model,
             elapsed_ms,
+            total_tokens,
         )
 
         return CompanyAnalysisResponse.model_validate(record, from_attributes=True).model_copy(
-            update={"cached": False}
+            update={
+                "cached": False,
+                "elapsed_ms": round(elapsed_ms, 1),
+                "prompt_tokens": prompt_tokens if total_tokens > 0 else None,
+                "completion_tokens": completion_tokens if total_tokens > 0 else None,
+                "total_tokens": total_tokens if total_tokens > 0 else None,
+            }
         )
 
     def get_by_id(self, analysis_id: int) -> CompanyAnalysis | None:

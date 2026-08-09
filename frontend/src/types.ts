@@ -123,6 +123,18 @@ export interface CompanyAnalysis {
   llm_model: string
   created_at: string
   cached?: boolean
+  elapsed_ms?: number | null
+  prompt_tokens?: number | null
+  completion_tokens?: number | null
+  total_tokens?: number | null
+}
+
+export interface AnalysisRunMetrics {
+  elapsedMs: number
+  promptTokens: number | null
+  completionTokens: number | null
+  totalTokens: number | null
+  cached: boolean
 }
 
 export interface AnalysisListItem {

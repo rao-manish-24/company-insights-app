@@ -68,6 +68,11 @@ class CompanyAnalysisResponse(BaseModel):
     llm_model: str
     created_at: datetime
     cached: bool = False
+    # Transient pipeline metrics (not persisted on the ORM row)
+    elapsed_ms: float | None = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
 
     model_config = {"from_attributes": True}
 
