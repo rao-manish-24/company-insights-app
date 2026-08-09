@@ -14,14 +14,24 @@ class AnalysisRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_by_id(self, analysis_id: int) -> CompanyAnalysis | None:
-        return self.db.get(CompanyAnalysis, analysis_id)
+    def get_by_id(self, analysis_id: int, *, user_id: int | None = None) -> CompanyAnalysis | None:
+        row = self.db.get(CompanyAnalysis, analysis_id)
+        if not row:
+            return None
+        if user_id is not None and row.user_id != user_id:
+            return None
+        return row
 
-    def list_recent(self, limit: int = 20) -> list[CompanyAnalysis]:
-        stmt = select(CompanyAnalysis).order_by(CompanyAnalysis.created_at.desc()).limit(limit)
+    def list_recent(self, limit: int = 20, *, user_id: int) -> list[CompanyAnalysis]:
+        stmt = (
+            select(CompanyAnalysis)
+            .where(CompanyAnalysis.user_id == user_id)
+            .order_by(CompanyAnalysis.created_at.desc())
+            .limit(limit)
+        )
         return list(self.db.scalars(stmt).all())
 
-    def search(self, query: str, limit: int = 20) -> list[CompanyAnalysis]:
+    def search(self, query: str, limit: int = 20, *, user_id: int) -> list[CompanyAnalysis]:
         # Escape LIKE wildcards so user input is treated literally
         escaped = (
             normalize_company_name(query)
@@ -32,17 +42,25 @@ class AnalysisRepository:
         pattern = f"%{escaped}%"
         stmt = (
             select(CompanyAnalysis)
+            .where(CompanyAnalysis.user_id == user_id)
             .where(CompanyAnalysis.company_name_normalized.ilike(pattern, escape="\\"))
             .order_by(CompanyAnalysis.created_at.desc())
             .limit(limit)
         )
         return list(self.db.scalars(stmt).all())
 
-    def get_cached(self, company_name: str, cache_hours: int) -> CompanyAnalysis | None:
+    def get_cached(
+        self,
+        company_name: str,
+        cache_hours: int,
+        *,
+        user_id: int,
+    ) -> CompanyAnalysis | None:
         normalized = normalize_company_name(company_name)
         cutoff = datetime.now(timezone.utc) - timedelta(hours=cache_hours)
         stmt = (
             select(CompanyAnalysis)
+            .where(CompanyAnalysis.user_id == user_id)
             .where(CompanyAnalysis.company_name_normalized == normalized)
             .where(CompanyAnalysis.created_at >= cutoff)
             .order_by(CompanyAnalysis.created_at.desc())
@@ -56,7 +74,9 @@ class AnalysisRepository:
         self.db.refresh(record)
         return record
 
-    def delete_all(self) -> int:
-        result = self.db.execute(delete(CompanyAnalysis))
+    def delete_all(self, *, user_id: int) -> int:
+        result = self.db.execute(
+            delete(CompanyAnalysis).where(CompanyAnalysis.user_id == user_id)
+        )
         self.db.commit()
         return int(result.rowcount or 0)

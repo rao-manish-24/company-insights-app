@@ -1,9 +1,12 @@
+import { getAuthToken } from './auth'
 import { API_BASE, REQUEST_TIMEOUT_MS } from './config'
 import type {
   AnalysisListItem,
+  AuthResponse,
   CompanyAnalysis,
   ExpandInsightKind,
   ExpandInsightResult,
+  UserPublic,
 } from './types'
 
 export class ApiError extends Error {
@@ -34,19 +37,28 @@ function parseDetail(body: unknown): string | null {
   return null
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit & { auth?: boolean },
+): Promise<T> {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const { auth = false, ...fetchInit } = init || {}
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...(fetchInit.body ? { 'Content-Type': 'application/json' } : {}),
+    ...((fetchInit.headers as Record<string, string>) || {}),
+  }
+  if (auth) {
+    const token = getAuthToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+  }
 
   try {
     const response = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      signal: init?.signal ?? controller.signal,
-      headers: {
-        Accept: 'application/json',
-        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(init?.headers || {}),
-      },
+      ...fetchInit,
+      signal: fetchInit.signal ?? controller.signal,
+      headers,
     })
 
     if (!response.ok) {
@@ -75,9 +87,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+export function registerAccount(payload: {
+  email: string
+  password: string
+  display_name?: string
+}): Promise<AuthResponse> {
+  return request<AuthResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function loginAccount(payload: {
+  email: string
+  password: string
+}): Promise<AuthResponse> {
+  return request<AuthResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function fetchMe(): Promise<UserPublic> {
+  return request<UserPublic>('/auth/me', { auth: true })
+}
+
 export function analyzeCompany(companyName: string, forceRefresh = false): Promise<CompanyAnalysis> {
   return request<CompanyAnalysis>('/analyze', {
     method: 'POST',
+    auth: true,
     body: JSON.stringify({
       company_name: companyName,
       force_refresh: forceRefresh,
@@ -86,17 +124,18 @@ export function analyzeCompany(companyName: string, forceRefresh = false): Promi
 }
 
 export function listRecentAnalyses(limit = 15): Promise<AnalysisListItem[]> {
-  return request<AnalysisListItem[]>(`/analyses?limit=${limit}`)
+  return request<AnalysisListItem[]>(`/analyses?limit=${limit}`, { auth: true })
 }
 
 export function clearAnalysesHistory(): Promise<{ status: string; deleted: number }> {
   return request<{ status: string; deleted: number }>('/analyses', {
     method: 'DELETE',
+    auth: true,
   })
 }
 
 export function getAnalysis(id: number): Promise<CompanyAnalysis> {
-  return request<CompanyAnalysis>(`/analyses/${id}`)
+  return request<CompanyAnalysis>(`/analyses/${id}`, { auth: true })
 }
 
 export interface EmailBriefResult {
@@ -109,6 +148,7 @@ export interface EmailBriefResult {
 export function emailAnalysis(id: number, to?: string): Promise<EmailBriefResult> {
   return request<EmailBriefResult>(`/analyses/${id}/email`, {
     method: 'POST',
+    auth: true,
     body: JSON.stringify(to ? { to } : {}),
   })
 }
@@ -121,6 +161,7 @@ export function expandInsight(
 ): Promise<ExpandInsightResult> {
   return request<ExpandInsightResult>(`/analyses/${analysisId}/expand`, {
     method: 'POST',
+    auth: true,
     body: JSON.stringify({
       kind,
       index,

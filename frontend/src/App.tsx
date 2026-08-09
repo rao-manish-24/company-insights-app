@@ -1,6 +1,8 @@
 import { type FormEvent } from 'react'
 import { AnalysisProgress } from './components/AnalysisProgress'
+import { AuthModal } from './components/AuthModal'
 import { InsightsPanel } from './components/InsightsPanel'
+import { useAuth } from './hooks/useAuth'
 import { useCompanyInsights } from './hooks/useCompanyInsights'
 
 function formatLibraryDate(iso: string) {
@@ -23,6 +25,7 @@ function formatLibraryDate(iso: string) {
 }
 
 function App() {
+  const { user, ready, openAuth, signOut } = useAuth()
   const {
     query,
     setQuery,
@@ -65,7 +68,28 @@ function App() {
             </span>
             <span className="brand-word">Company Insights</span>
           </a>
-          <span className="topbar-note">News → insight → next move</span>
+          <div className="topbar-actions">
+            <span className="topbar-note">News → insight → next move</span>
+            {ready && user ? (
+              <div className="topbar-user">
+                <span className="topbar-user-email" title={user.email}>
+                  {user.display_name || user.email}
+                </span>
+                <button type="button" className="btn btn-ghost topbar-auth-btn" onClick={signOut}>
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-secondary topbar-auth-btn"
+                onClick={() => openAuth({ mode: 'signin' })}
+                disabled={!ready}
+              >
+                Sign in
+              </button>
+            )}
+          </div>
         </header>
 
         <section className={`hero ${hasBrief ? 'hero--compact' : ''}`}>
@@ -153,7 +177,8 @@ function App() {
               <div>
                 <h2>Reusable brief</h2>
                 <p>
-                  Saved in your library to reopen before the client conversation, email, or refresh.
+                  Saved in your private library after you sign in — reopen before the client
+                  conversation, email, or refresh.
                 </p>
               </div>
             </div>
@@ -176,11 +201,13 @@ function App() {
               <p className="section-label">Library</p>
               <h2>Recent briefs</h2>
               <p className="aside-lead">
-                {historyLoaded
-                  ? recent.length > 0
-                    ? `${recent.length} brief${recent.length === 1 ? '' : 's'} ready to reopen.`
-                    : 'No saved briefs yet.'
-                  : 'Load your previous searches, or generate a new brief.'}
+                {!user
+                  ? 'Sign in to load your private library.'
+                  : historyLoaded
+                    ? recent.length > 0
+                      ? `${recent.length} brief${recent.length === 1 ? '' : 's'} ready to reopen.`
+                      : 'No saved briefs yet.'
+                    : 'Load your previous searches, or generate a new brief.'}
               </p>
             </div>
             <div className="library-actions">
@@ -196,13 +223,17 @@ function App() {
                 type="button"
                 className="btn btn-ghost library-btn"
                 onClick={() => void clearHistory()}
-                disabled={loading || historyLoading}
+                disabled={loading || historyLoading || !user}
               >
                 Clear history
               </button>
             </div>
             {historyError && <p className="email-status error">{historyError}</p>}
-            {!historyLoaded && recent.length === 0 ? (
+            {!user ? (
+              <p className="empty-hint">
+                Sign in to generate insights and keep briefs private to your account.
+              </p>
+            ) : !historyLoaded && recent.length === 0 ? (
               <p className="empty-hint">Use Last 15 to load previous search results from the library.</p>
             ) : recent.length === 0 ? (
               <p className="empty-hint">Library is empty. Generate a brief to start a history.</p>
@@ -236,6 +267,8 @@ function App() {
           </aside>
         </div>
       </div>
+
+      <AuthModal />
     </div>
   )
 }

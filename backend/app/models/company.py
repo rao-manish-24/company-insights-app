@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,9 @@ class CompanyAnalysis(Base):
     __tablename__ = "company_analyses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     company_name: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     company_name_normalized: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     executive_summary: Mapped[str] = mapped_column(Text, nullable=False)

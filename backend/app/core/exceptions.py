@@ -31,6 +31,16 @@ class BadRequestError(AppError):
     default_detail = "Bad request"
 
 
+class UnauthorizedError(AppError):
+    status_code = 401
+    default_detail = "Authentication required"
+
+
+class ConflictError(AppError):
+    status_code = 409
+    default_detail = "Conflict"
+
+
 class UpstreamError(AppError):
     status_code = 502
     default_detail = "Upstream service failed"

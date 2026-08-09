@@ -143,3 +143,16 @@ export interface AnalysisListItem {
   executive_summary: string
   created_at: string
 }
+
+export interface UserPublic {
+  id: number
+  email: string
+  display_name?: string | null
+  created_at: string
+}
+
+export interface AuthResponse {
+  access_token: string
+  token_type: string
+  user: UserPublic
+}

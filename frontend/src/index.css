@@ -221,6 +221,154 @@ ol {
   background: var(--teal-soft);
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.topbar-user-email {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.topbar-auth-btn {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.84rem;
+}
+
+/* Auth modal */
+
+.auth-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(7, 21, 37, 0.42);
+}
+
+.auth-modal {
+  width: min(100%, 26rem);
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem 1.3rem 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-warm);
+}
+
+.auth-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.auth-modal-head h2 {
+  margin-top: 0.15rem;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.auth-modal-lead {
+  margin-top: 0.35rem;
+  color: var(--slate);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.auth-close {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  background: rgba(7, 21, 37, 0.05);
+}
+
+.auth-tabs button {
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--slate);
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.55rem 0.5rem;
+  cursor: pointer;
+}
+
+.auth-tabs button.is-active {
+  background: #fff;
+  border-color: rgba(200, 30, 69, 0.18);
+  color: var(--signal-deep);
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.auth-field span {
+  color: var(--slate-soft);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 0.7rem 0.85rem;
+  color: var(--ink);
+}
+
+.auth-field input:focus {
+  outline: 2px solid rgba(200, 30, 69, 0.25);
+  border-color: rgba(200, 30, 69, 0.35);
+}
+
+.auth-error {
+  margin: 0;
+  color: var(--signal-deep);
+  font-size: 0.86rem;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
 /* ── Hero ───────────────────────────────────────────────── */
 
 .hero {

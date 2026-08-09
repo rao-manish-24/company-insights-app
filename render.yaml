@@ -2,7 +2,7 @@
 # https://render.com/docs/blueprint-spec
 #
 # After deploy:
-# 1) Set secrets on companyinsights-api (NEWS_API_KEY, LLM_API_KEY, SMTP_*, etc.)
+# 1) Set secrets on companyinsights-api (JWT_SECRET, NEWS_API_KEY, LLM_API_KEY, RESEND_*, etc.)
 # 2) Set CORS_ORIGINS to your static site URL (https://companyinsights-web.onrender.com)
 # 3) Set VITE_API_BASE_URL on companyinsights-web to https://companyinsights-api.onrender.com/api
 # 4) Manual Deploy / clear build cache on the static site so Vite picks up the API URL
@@ -38,6 +38,18 @@ services:
         value: https://api.x.ai/v1
       - key: LLM_MODEL
         value: grok-4.5
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRE_MINUTES
+        value: "10080"
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_EMAIL
+        value: admin@companyinsights.local
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_DISPLAY_NAME
+        value: Admin
       - key: LOG_LEVEL
         value: INFO
       - key: LOG_FORMAT

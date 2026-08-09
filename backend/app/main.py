@@ -4,15 +4,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth_routes import router as auth_router
 from app.api.routes import router
 from app.core.config import get_settings
 from sqlalchemy import text
 
-from app.core.database import Base, engine
+from app.core.database import Base, SessionLocal, engine
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import RequestLoggingMiddleware
-from app.models import company  # noqa: F401 — register models
+from app.models import company, user  # noqa: F401 — register models
+from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,18 @@ def _ensure_schema() -> None:
             text(
                 "ALTER TABLE company_analyses "
                 "ADD COLUMN IF NOT EXISTS company_profile JSONB NOT NULL DEFAULT '{}'::jsonb"
+            )
+        )
+        conn.execute(
+            text(
+                "ALTER TABLE company_analyses "
+                "ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_company_analyses_user_id "
+                "ON company_analyses (user_id)"
             )
         )
 
@@ -41,6 +55,14 @@ async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
     _ensure_schema()
     logger.info("Database tables ready")
+    db = SessionLocal()
+    try:
+        AuthService(db, settings).ensure_admin_user()
+    except Exception:
+        logger.exception("Failed to ensure admin account")
+        raise
+    finally:
+        db.close()
     yield
     logger.info("Shutting down %s", settings.app_name)
 
@@ -77,6 +99,7 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID"],
     )
 
+    app.include_router(auth_router, prefix="/api")
     app.include_router(router, prefix="/api")
     return app
 

@@ -5,9 +5,9 @@ import time
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.core.exceptions import NotFoundError
 from app.core.rate_limit import RateLimitError, analyze_singleflight, refresh_rate_limiter
 from app.models.company import CompanyAnalysis
-from app.core.exceptions import NotFoundError
 from app.models.schemas import (
     CompanyAnalysisResponse,
     ExpandInsightResponse,
@@ -52,6 +52,18 @@ def _merge_leadership(profile: dict, leadership_fill: dict | None) -> dict:
     return profile
 
 
+def _cached_response(row: CompanyAnalysis) -> CompanyAnalysisResponse:
+    return CompanyAnalysisResponse.model_validate(row, from_attributes=True).model_copy(
+        update={
+            "cached": True,
+            "elapsed_ms": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        }
+    )
+
+
 class AnalysisService:
     def __init__(
         self,
@@ -69,24 +81,26 @@ class AnalysisService:
         self.profile_service = profile_service or CompanyProfileService(self.settings)
         self.market_service = market_service or MarketDataService()
 
-    def peek_cache(self, company_name: str) -> CompanyAnalysisResponse | None:
+    def peek_cache(self, company_name: str, *, user_id: int) -> CompanyAnalysisResponse | None:
         cleaned_name = " ".join(company_name.strip().split())
         if not cleaned_name:
             return None
-        cached = self.repo.get_cached(cleaned_name, self.settings.analysis_cache_hours)
+        cached = self.repo.get_cached(
+            cleaned_name,
+            self.settings.analysis_cache_hours,
+            user_id=user_id,
+        )
         if not cached:
             return None
-        return CompanyAnalysisResponse.model_validate(cached, from_attributes=True).model_copy(
-            update={
-                "cached": True,
-                "elapsed_ms": 0,
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0,
-            }
-        )
+        return _cached_response(cached)
 
-    async def analyze(self, company_name: str, force_refresh: bool = False) -> CompanyAnalysisResponse:
+    async def analyze(
+        self,
+        company_name: str,
+        force_refresh: bool = False,
+        *,
+        user_id: int,
+    ) -> CompanyAnalysisResponse:
         cleaned_name = " ".join(company_name.strip().split())
         if not cleaned_name:
             raise ValueError("Company name is required")
@@ -94,26 +108,31 @@ class AnalysisService:
         normalized = normalize_company_name(cleaned_name)
 
         if not force_refresh:
-            cached = self.peek_cache(cleaned_name)
+            cached = self.peek_cache(cleaned_name, user_id=user_id)
             if cached:
                 logger.info(
-                    "Cache hit company=%r analysis_id=%s age_window_hours=%s",
+                    "Cache hit company=%r analysis_id=%s user_id=%s age_window_hours=%s",
                     cleaned_name,
                     cached.id,
+                    user_id,
                     self.settings.analysis_cache_hours,
                 )
                 return cached
-            logger.info("Cache miss company=%r", cleaned_name)
+            logger.info("Cache miss company=%r user_id=%s", cleaned_name, user_id)
         else:
             # Protect upstream quotas: at most one refresh per company per cooldown window
             try:
                 refresh_rate_limiter.check(
-                    f"refresh:{normalized}",
+                    f"refresh:{user_id}:{normalized}",
                     limit=1,
                     window_seconds=max(60, self.settings.refresh_cooldown_minutes * 60),
                 )
             except RateLimitError:
-                latest = self.repo.get_cached(cleaned_name, max(self.settings.analysis_cache_hours, 24) * 7)
+                latest = self.repo.get_cached(
+                    cleaned_name,
+                    max(self.settings.analysis_cache_hours, 24) * 7,
+                    user_id=user_id,
+                )
                 # Allow one more upstream run if the only cached brief is a fallback
                 # (e.g. LLM key was missing/failing on first generate, then fixed).
                 is_fallback = bool(
@@ -125,19 +144,12 @@ class AnalysisService:
                 )
                 if latest and not is_fallback:
                     logger.info(
-                        "Refresh cooldown — serving cached brief company=%r id=%s",
+                        "Refresh cooldown — serving cached brief company=%r id=%s user_id=%s",
                         cleaned_name,
                         latest.id,
+                        user_id,
                     )
-                    return CompanyAnalysisResponse.model_validate(latest, from_attributes=True).model_copy(
-                        update={
-                            "cached": True,
-                            "elapsed_ms": 0,
-                            "prompt_tokens": 0,
-                            "completion_tokens": 0,
-                            "total_tokens": 0,
-                        }
-                    )
+                    return _cached_response(latest)
                 if is_fallback:
                     logger.info(
                         "Refresh cooldown bypass — cached brief is fallback company=%r id=%s",
@@ -151,34 +163,45 @@ class AnalysisService:
                     )
 
         async def _run() -> CompanyAnalysisResponse:
-            return await self._analyze_uncached(cleaned_name, force_refresh=force_refresh)
+            return await self._analyze_uncached(
+                cleaned_name,
+                force_refresh=force_refresh,
+                user_id=user_id,
+            )
 
-        return await analyze_singleflight.do(f"analyze:{normalized}", _run)
+        return await analyze_singleflight.do(f"analyze:{user_id}:{normalized}", _run)
 
     async def _analyze_uncached(
         self,
         cleaned_name: str,
         *,
         force_refresh: bool = False,
+        user_id: int,
     ) -> CompanyAnalysisResponse:
         started = time.perf_counter()
-        logger.info("Pipeline start company=%r force_refresh=%s", cleaned_name, force_refresh)
+        logger.info(
+            "Pipeline start company=%r force_refresh=%s user_id=%s",
+            cleaned_name,
+            force_refresh,
+            user_id,
+        )
 
         # Only reuse a brief written by a concurrent singleflight twin.
         # Never short-circuit a true Refresh against the long DB cache window.
         if not force_refresh:
-            cached = self.repo.get_cached(cleaned_name, self.settings.analysis_cache_hours)
+            cached = self.repo.get_cached(
+                cleaned_name,
+                self.settings.analysis_cache_hours,
+                user_id=user_id,
+            )
             if cached:
-                logger.info("Cache filled during wait company=%r analysis_id=%s", cleaned_name, cached.id)
-                return CompanyAnalysisResponse.model_validate(cached, from_attributes=True).model_copy(
-                    update={
-                        "cached": True,
-                        "elapsed_ms": 0,
-                        "prompt_tokens": 0,
-                        "completion_tokens": 0,
-                        "total_tokens": 0,
-                    }
+                logger.info(
+                    "Cache filled during wait company=%r analysis_id=%s user_id=%s",
+                    cleaned_name,
+                    cached.id,
+                    user_id,
                 )
+                return _cached_response(cached)
 
         articles = await self.news_service.fetch_company_news(cleaned_name)
         logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
@@ -219,6 +242,7 @@ class AnalysisService:
         )
 
         record = CompanyAnalysis(
+            user_id=user_id,
             company_name=cleaned_name,
             company_name_normalized=normalize_company_name(cleaned_name),
             executive_summary=insights["executive_summary"],
@@ -253,30 +277,31 @@ class AnalysisService:
             }
         )
 
-    def get_by_id(self, analysis_id: int) -> CompanyAnalysis | None:
-        return self.repo.get_by_id(analysis_id)
+    def get_by_id(self, analysis_id: int, *, user_id: int) -> CompanyAnalysis | None:
+        return self.repo.get_by_id(analysis_id, user_id=user_id)
 
-    def list_recent(self, limit: int = 20) -> list[CompanyAnalysis]:
-        return self.repo.list_recent(limit=limit)
+    def list_recent(self, limit: int = 20, *, user_id: int) -> list[CompanyAnalysis]:
+        return self.repo.list_recent(limit=limit, user_id=user_id)
 
-    def search(self, query: str, limit: int = 20) -> list[CompanyAnalysis]:
-        return self.repo.search(query, limit=limit)
+    def search(self, query: str, limit: int = 20, *, user_id: int) -> list[CompanyAnalysis]:
+        return self.repo.search(query, limit=limit, user_id=user_id)
 
-    def clear_history(self) -> int:
-        deleted = self.repo.delete_all()
-        logger.info("Cleared analysis history deleted=%s", deleted)
+    def clear_history(self, *, user_id: int) -> int:
+        deleted = self.repo.delete_all(user_id=user_id)
+        logger.info("Cleared analysis history deleted=%s user_id=%s", deleted, user_id)
         return deleted
 
     async def expand_insight(
         self,
         analysis_id: int,
         *,
+        user_id: int,
         kind: str,
         index: int,
         depth: str = "standard",
         prior_analysis: str | None = None,
     ) -> ExpandInsightResponse:
-        row = self.repo.get_by_id(analysis_id)
+        row = self.repo.get_by_id(analysis_id, user_id=user_id)
         if not row:
             raise NotFoundError("Analysis not found")
 

@@ -91,6 +91,55 @@ class CompanyAnalysisListItem(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RegisterRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: str | None = Field(default=None, max_length=120)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if not _EMAIL_RE.match(cleaned):
+            raise ValueError("Invalid email address")
+        return cleaned
+
+
+class LoginRequest(BaseModel):
+    # Accepts email or bare username (e.g. admin → admin@companyinsights.local)
+    email: str = Field(..., min_length=2, max_length=320)
+    password: str = Field(..., min_length=1, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def validate_login_identity(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if not cleaned:
+            raise ValueError("Email or username is required")
+        if "@" in cleaned:
+            if not _EMAIL_RE.match(cleaned):
+                raise ValueError("Invalid email address")
+            return cleaned
+        if not re.match(r"^[a-z0-9._-]{2,64}$", cleaned):
+            raise ValueError("Invalid username")
+        return cleaned
+
+
+class UserPublic(BaseModel):
+    id: int
+    email: str
+    display_name: str | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserPublic
+
+
 class HealthResponse(BaseModel):
     status: str
     app: str

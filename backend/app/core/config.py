@@ -71,6 +71,18 @@ class Settings(BaseSettings):
     email_to: str = ""
     email_auto_send: bool = False
 
+    # Auth (HS256 JWT). Override JWT_SECRET in every non-local environment.
+    jwt_secret: str = "dev-only-change-me-company-insights-jwt"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24 * 7
+
+    # Persistent admin account ensured on every API startup.
+    # Sign in with ADMIN_USERNAME or ADMIN_EMAIL + ADMIN_PASSWORD.
+    admin_username: str = "admin"
+    admin_email: str = "admin@companyinsights.local"
+    admin_password: str = "Admin123!"
+    admin_display_name: str = "Admin"
+
     @field_validator("log_format")
     @classmethod
     def validate_log_format(cls, value: str) -> str:

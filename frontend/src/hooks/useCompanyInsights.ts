@@ -1,10 +1,13 @@
-import { useCallback, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { analyzeCompany, clearAnalysesHistory, getAnalysis, listRecentAnalyses } from '../api'
+import { ApiError } from '../api'
 import type { AnalysisListItem, AnalysisRunMetrics, CompanyAnalysis } from '../types'
+import { useAuth } from './useAuth'
 
 const HISTORY_LIMIT = 15
 
 export function useCompanyInsights() {
+  const { user, openAuth, pendingCompany, clearPendingCompany } = useAuth()
   const [query, setQuery] = useState('')
   const [analysis, setAnalysis] = useState<CompanyAnalysis | null>(null)
   const [recent, setRecent] = useState<AnalysisListItem[]>([])
@@ -18,7 +21,29 @@ export function useCompanyInsights() {
   const [, startTransition] = useTransition()
   const requestIdRef = useRef(0)
 
+  const handleAuthError = useCallback(
+    (err: unknown, pending?: string) => {
+      if (err instanceof ApiError && err.status === 401) {
+        openAuth({
+          mode: 'signin',
+          message: 'Sign in to generate insights and access your library.',
+          pendingCompany: pending,
+        })
+        return true
+      }
+      return false
+    },
+    [openAuth],
+  )
+
   const loadHistory = useCallback(async () => {
+    if (!user) {
+      openAuth({
+        mode: 'signin',
+        message: 'Sign in to load your private library.',
+      })
+      return
+    }
     setHistoryLoading(true)
     setHistoryError(null)
     try {
@@ -26,15 +51,23 @@ export function useCompanyInsights() {
       startTransition(() => setRecent(items))
       setHistoryLoaded(true)
     } catch (err) {
+      if (handleAuthError(err)) return
       setHistoryError(err instanceof Error ? err.message : 'Could not load history')
     } finally {
       setHistoryLoading(false)
     }
-  }, [startTransition])
+  }, [user, openAuth, handleAuthError, startTransition])
 
   const clearHistory = useCallback(async () => {
+    if (!user) {
+      openAuth({
+        mode: 'signin',
+        message: 'Sign in to manage your library.',
+      })
+      return
+    }
     const confirmed = window.confirm(
-      'Clear all saved briefs from the library? This cannot be undone.',
+      'Clear all saved briefs from your library? This cannot be undone.',
     )
     if (!confirmed) return
 
@@ -49,17 +82,27 @@ export function useCompanyInsights() {
       })
       setHistoryLoaded(true)
     } catch (err) {
+      if (handleAuthError(err)) return
       setHistoryError(err instanceof Error ? err.message : 'Could not clear history')
     } finally {
       setHistoryLoading(false)
     }
-  }, [startTransition])
+  }, [user, openAuth, handleAuthError, startTransition])
 
   const runAnalysis = useCallback(
     async (companyName: string, forceRefresh = false) => {
       const trimmed = companyName.trim()
       if (!trimmed) {
         setError('Enter a company name to generate an insights brief.')
+        return
+      }
+
+      if (!user) {
+        openAuth({
+          mode: 'signin',
+          message: 'Sign in to generate insights for this company.',
+          pendingCompany: trimmed,
+        })
         return
       }
 
@@ -77,7 +120,6 @@ export function useCompanyInsights() {
         setAnalysis(result)
         setQuery(result.company_name)
         setRunMetrics({
-          // Cache hits return ~0 server elapsed; prefer wall-clock for UX.
           elapsedMs: result.cached ? clientElapsed : (result.elapsed_ms ?? clientElapsed),
           promptTokens: result.prompt_tokens ?? null,
           completionTokens: result.completion_tokens ?? null,
@@ -87,6 +129,10 @@ export function useCompanyInsights() {
         await loadHistory()
       } catch (err) {
         if (requestId !== requestIdRef.current) return
+        if (handleAuthError(err, trimmed)) {
+          setError(null)
+          return
+        }
         setError(err instanceof Error ? err.message : 'Analysis failed')
         setRunMetrics(null)
       } finally {
@@ -95,30 +141,64 @@ export function useCompanyInsights() {
         }
       }
     },
-    [loadHistory],
+    [user, openAuth, loadHistory, handleAuthError],
   )
 
-  const openRecent = useCallback(async (id: number) => {
-    const requestId = ++requestIdRef.current
-    setLoading(true)
-    setLoadingMode('open')
+  // After successful sign-in/register, continue the company the guest typed.
+  useEffect(() => {
+    if (!user || !pendingCompany) return
+    const company = pendingCompany
+    clearPendingCompany()
+    setQuery(company)
+    void runAnalysis(company)
+  }, [user, pendingCompany, clearPendingCompany, runAnalysis])
+
+  // Reset workspace when the account changes / signs out.
+  useEffect(() => {
+    if (user) {
+      void loadHistory()
+      return
+    }
+    setAnalysis(null)
+    setRecent([])
+    setHistoryLoaded(false)
     setRunMetrics(null)
     setError(null)
-    try {
-      const result = await getAnalysis(id)
-      if (requestId !== requestIdRef.current) return
-      setAnalysis(result)
-      setQuery(result.company_name)
-      setRunMetrics(null)
-    } catch (err) {
-      if (requestId !== requestIdRef.current) return
-      setError(err instanceof Error ? err.message : 'Could not load analysis')
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false)
+    setHistoryError(null)
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps -- intentional on identity change
+
+  const openRecent = useCallback(
+    async (id: number) => {
+      if (!user) {
+        openAuth({
+          mode: 'signin',
+          message: 'Sign in to reopen briefs from your library.',
+        })
+        return
       }
-    }
-  }, [])
+      const requestId = ++requestIdRef.current
+      setLoading(true)
+      setLoadingMode('open')
+      setRunMetrics(null)
+      setError(null)
+      try {
+        const result = await getAnalysis(id)
+        if (requestId !== requestIdRef.current) return
+        setAnalysis(result)
+        setQuery(result.company_name)
+        setRunMetrics(null)
+      } catch (err) {
+        if (requestId !== requestIdRef.current) return
+        if (handleAuthError(err)) return
+        setError(err instanceof Error ? err.message : 'Could not load analysis')
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setLoading(false)
+        }
+      }
+    },
+    [user, openAuth, handleAuthError],
+  )
 
   return {
     query,
