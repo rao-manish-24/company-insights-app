@@ -19,6 +19,7 @@ import {
   suggestCompanies,
 } from '../api'
 import { ApiError } from '../api'
+import { clearAuthToken } from '../auth'
 import type {
   AnalysisListItem,
   AnalysisRunMetrics,
@@ -76,7 +77,7 @@ type CompanyInsightsContextValue = {
 const CompanyInsightsContext = createContext<CompanyInsightsContextValue | null>(null)
 
 export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
-  const { user, openAuth, pendingCompany, clearPendingCompany } = useAuth()
+  const { user, openAuth, pendingCompany, clearPendingCompany, continuePrivately } = useAuth()
   const [query, setQueryState] = useState('')
   const [analysis, setAnalysis] = useState<CompanyAnalysis | null>(null)
   const [recent, setRecent] = useState<AnalysisListItem[]>([])
@@ -121,9 +122,10 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
   const handleAuthError = useCallback(
     (err: unknown, pending?: string) => {
       if (err instanceof ApiError && err.status === 401) {
+        clearAuthToken()
         openAuth({
           mode: 'signin',
-          message: 'Sign in to generate insights and access your library.',
+          message: 'Session expired. Continue privately or sign in to keep going.',
           pendingCompany: pending,
         })
         return true
@@ -135,11 +137,15 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
 
   const loadHistory = useCallback(async () => {
     if (!user) {
-      openAuth({
-        mode: 'signin',
-        message: 'Sign in to load your private library.',
-      })
-      return
+      try {
+        await continuePrivately()
+      } catch {
+        openAuth({
+          mode: 'signin',
+          message: 'Sign in or start a private session to load your library.',
+        })
+        return
+      }
     }
     setHistoryLoading(true)
     setHistoryError(null)
@@ -153,7 +159,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
     } finally {
       setHistoryLoading(false)
     }
-  }, [user, openAuth, handleAuthError, startTransition])
+  }, [user, openAuth, continuePrivately, handleAuthError, startTransition])
 
   const clearHistory = useCallback(async () => {
     if (!user) {
@@ -256,12 +262,16 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       }
 
       if (!user) {
-        openAuth({
-          mode: 'signin',
-          message: 'Sign in to generate insights for this company.',
-          pendingCompany: trimmed,
-        })
-        return 'auth'
+        try {
+          await continuePrivately()
+        } catch {
+          openAuth({
+            mode: 'signin',
+            message: 'Start a private session or sign in to generate insights.',
+            pendingCompany: trimmed,
+          })
+          return 'auth'
+        }
       }
 
       const { requestId, signal } = beginRequest()
@@ -335,27 +345,42 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [user, openAuth, handleAuthError, executeAnalyze, clearAutocomplete, beginRequest],
+    [
+      user,
+      openAuth,
+      continuePrivately,
+      handleAuthError,
+      executeAnalyze,
+      clearAutocomplete,
+      beginRequest,
+    ],
   )
 
   const updateQuery = useCallback(
     (value: string) => {
+      const apply = () => {
+        autocompleteLiveRef.current = true
+        setQueryState(value)
+        setError(null)
+        if (suggestions.length > 0) {
+          setSuggestions([])
+          setSuggestionMessage(null)
+        }
+      }
       if (!user) {
-        openAuth({
-          mode: 'signin',
-          message: 'Sign in to search companies and generate insights.',
-        })
+        void continuePrivately()
+          .then(apply)
+          .catch(() =>
+            openAuth({
+              mode: 'signin',
+              message: 'Start a private session or sign in to search companies.',
+            }),
+          )
         return
       }
-      autocompleteLiveRef.current = true
-      setQueryState(value)
-      setError(null)
-      if (suggestions.length > 0) {
-        setSuggestions([])
-        setSuggestionMessage(null)
-      }
+      apply()
     },
-    [suggestions.length, user, openAuth],
+    [suggestions.length, user, openAuth, continuePrivately],
   )
 
   // Live autocomplete while typing — signed-in users only.

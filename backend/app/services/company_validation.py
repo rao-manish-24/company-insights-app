@@ -56,7 +56,19 @@ _REJECT_DESCRIPTION_BITS = (
     "cricketer",
     "child of",
     "human being",
+    "masculine given name",
+    "feminine given name",
+    "common hindu",
+    "god of the mind",
 )
+
+
+def description_is_rejected(description: str | None) -> bool:
+    """True when the blurb is clearly a person/place/concept — not a company."""
+    desc = (description or "").lower().strip()
+    if not desc:
+        return False
+    return any(bit in desc for bit in _REJECT_DESCRIPTION_BITS)
 
 
 def normalize_name(value: str) -> str:
@@ -80,6 +92,50 @@ def stemmed_tokens(value: str) -> tuple[str, ...]:
     return tuple(stem_token(tok) for tok in normalize_name(value).split() if tok)
 
 
+# Parent/operating-brand renames that market data often surfaces as the legal name.
+_BRAND_FAMILIES: tuple[frozenset[str], ...] = (
+    frozenset({"google", "alphabet"}),
+    frozenset({"facebook", "meta", "meta platforms"}),
+    frozenset({"twitter", "x corp", "xai"}),
+)
+
+# When Yahoo returns the right ticker but a renamed legal entity (Google → Alphabet).
+_QUERY_TICKERS: dict[str, frozenset[str]] = {
+    "google": frozenset({"GOOGL", "GOOG"}),
+    "alphabet": frozenset({"GOOGL", "GOOG"}),
+    "facebook": frozenset({"META"}),
+    "meta": frozenset({"META"}),
+    "meta platforms": frozenset({"META"}),
+    "apple": frozenset({"AAPL"}),
+    "microsoft": frozenset({"MSFT"}),
+    "tesla": frozenset({"TSLA"}),
+    "amazon": frozenset({"AMZN"}),
+    "nvidia": frozenset({"NVDA"}),
+    "netflix": frozenset({"NFLX"}),
+    "amd": frozenset({"AMD"}),
+    "advanced micro devices": frozenset({"AMD"}),
+    "advanced micro device": frozenset({"AMD"}),
+}
+
+
+def _brand_family(name: str) -> frozenset[str] | None:
+    norm = normalize_name(name)
+    if not norm:
+        return None
+    tokens = norm.split()
+    core = tokens[0]
+    for family in _BRAND_FAMILIES:
+        if norm in family or core in family:
+            return family
+    return None
+
+
+def same_brand_family(query: str, candidate: str | None) -> bool:
+    left = _brand_family(query)
+    right = _brand_family(candidate or "")
+    return bool(left and right and left is right)
+
+
 def names_align(query: str, candidate: str | None) -> bool:
     """Require real lexical overlap — not 'k' ⊆ 'kelvin' or 'apple' ⊆ 'apple hospitality'."""
     q = normalize_name(query)
@@ -100,6 +156,10 @@ def names_align(query: str, candidate: str | None) -> bool:
     if q_stem and q_stem == c_stem:
         return True
 
+    # Google ↔ Alphabet, Facebook ↔ Meta, etc.
+    if same_brand_family(q, c):
+        return True
+
     q_tokens = q.split()
     c_tokens = c.split()
     if not q_tokens or not c_tokens:
@@ -118,12 +178,21 @@ def names_align(query: str, candidate: str | None) -> bool:
         if len(shorter) >= 3 and (len(shorter) / max(len(longer), 1)) >= 0.45:
             return True
 
-    q_set, c_set = set(q_tokens), set(c_tokens)
-    overlap = q_set & c_set
-    # Prefer stem overlap for multi-word near misses.
     stem_overlap = set(q_stem) & set(c_stem)
+    # Prefer stem overlap for multi-word near misses.
     if stem_overlap and (len(stem_overlap) / max(len(q_stem), 1)) >= 0.8 and len(q_stem) >= 2:
         return True
+
+    # "Applied Micro Devices" must not match "Advanced Micro Devices" on shared tails.
+    if (
+        len(q_tokens) >= 2
+        and len(c_tokens) >= 2
+        and stem_token(q_tokens[0]) != stem_token(c_tokens[0])
+    ):
+        return False
+
+    q_set, c_set = set(q_tokens), set(c_tokens)
+    overlap = q_set & c_set
     return len(overlap) >= 1 and (len(overlap) / len(q_set)) >= 0.6
 
 
@@ -131,7 +200,7 @@ def description_looks_like_company(description: str | None) -> bool:
     desc = (description or "").lower().strip()
     if not desc:
         return False
-    if any(bit in desc for bit in _REJECT_DESCRIPTION_BITS):
+    if description_is_rejected(desc):
         return False
     # Biographical blurbs ("born 1985") are people, not companies.
     if re.search(r"\bborn\b|\b\d{4}\s*[–-]\s*\d{0,4}\b", desc):
@@ -211,6 +280,10 @@ def market_supports_company(query: str, market: dict[str, Any] | None) -> bool:
     q_compact = re.sub(r"[^A-Z0-9.\-]", "", query.strip().upper())
     # Direct ticker entry (MSFT, BRK.B)
     if q_compact and q_compact == ticker.replace(" ", ""):
+        return True
+    # Known brand → ticker even when Yahoo legal name is the parent (Google → Alphabet).
+    known = _QUERY_TICKERS.get(normalize_name(query))
+    if known and ticker in known:
         return True
     market_name = market.get("name")
     return names_align(query, str(market_name) if market_name else None)

@@ -11,6 +11,7 @@ from typing import Any, Literal
 import httpx
 
 from app.services.company_validation import (
+    description_is_rejected,
     description_looks_like_company,
     normalize_name,
     stemmed_tokens,
@@ -679,6 +680,9 @@ class CompanyLookupService:
             snippet = re.sub(r"\s+", " ", snippet).strip() or None
             if not self._strong_name_relation(parts, title):
                 continue
+            # Never promote person/place pages (e.g. given-name "Manish") even on exact title match.
+            if description_is_rejected(snippet):
+                continue
             # Exact title matches (SpaceXAI) can pass with thin snippets; fuzzy needs company signal.
             if not description_looks_like_company(snippet) and normalize_name(title) != parts.norm:
                 continue
@@ -981,10 +985,13 @@ class CompanyLookupService:
         return self._classify_match(parts, label) != "none"
 
     def _is_company_grade(self, suggestion: CompanySuggestion) -> bool:
+        if description_is_rejected(suggestion.description):
+            return False
         if description_looks_like_company(suggestion.description):
             return True
         if suggestion.source == "wikipedia":
-            # Exact Wikipedia title hits (SpaceXAI) are acceptable even with thin snippets.
+            # Exact Wikipedia title hits (SpaceXAI) are acceptable with thin/empty snippets,
+            # but never when the snippet is an explicit non-company page.
             name = normalize_name(suggestion.name)
             return bool(name) and (
                 suggestion.match_kind in {"exact", "brand_suffix"} or len(name) >= 5
@@ -1092,6 +1099,8 @@ class CompanyLookupService:
                 host = re.sub(r"[^a-z0-9]", "", ((chosen.location or "").split(".")[0]).lower())
                 return len(parts.compact) >= 5 and host == parts.compact
             if chosen.source in {"wikidata", "yahoo", "wikipedia"}:
+                if description_is_rejected(chosen.description):
+                    return False
                 if len(parts.norm) < 4:
                     return False
                 if description_looks_like_company(chosen.description) or bool(chosen.ticker):

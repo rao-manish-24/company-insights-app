@@ -40,6 +40,12 @@ def _ensure_schema() -> None:
                 "ON company_analyses (user_id)"
             )
         )
+        conn.execute(
+            text(
+                "ALTER TABLE users "
+                "ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+        )
 
 
 @asynccontextmanager

@@ -32,11 +32,14 @@ export function AppShell() {
                 <Link className="btn btn-ghost topbar-auth-btn" to="/insights">
                   Insights
                 </Link>
-                <span className="topbar-user-email" title={user.email}>
-                  {user.display_name || user.email}
+                <span
+                  className={`topbar-user-email${user.is_guest ? ' is-guest' : ''}`}
+                  title={user.is_guest ? 'Private session — not linked to an email' : user.email}
+                >
+                  {user.is_guest ? 'Private' : user.display_name || user.email}
                 </span>
                 <button type="button" className="btn btn-ghost topbar-auth-btn" onClick={signOut}>
-                  Sign out
+                  {user.is_guest ? 'End session' : 'Sign out'}
                 </button>
               </div>
             ) : (

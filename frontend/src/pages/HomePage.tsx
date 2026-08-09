@@ -43,27 +43,11 @@ export function HomePage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!user) {
-      openAuth({
-        mode: 'signin',
-        message: 'Sign in to search companies and generate insights.',
-        pendingCompany: query.trim() || undefined,
-      })
-      return
-    }
-    // Starting a new run aborts any in-flight analyze via beginRequest().
+    // Unsigned users auto-start a private session inside runAnalysis.
     await runAnalysis(query)
   }
 
   async function onPickSuggestion(item: Parameters<typeof pickSuggestion>[0]) {
-    if (!user) {
-      openAuth({
-        mode: 'signin',
-        message: 'Sign in to generate insights for this company.',
-        pendingCompany: item.name,
-      })
-      return
-    }
     await pickSuggestion(item)
   }
 
@@ -89,101 +73,99 @@ export function HomePage() {
 
   const searchStage = (
     <div className="home-search-stage">
-      {!user ? (
-        <div className="search-console search-console--locked">
-          <p className="search-locked-lead">
-            Sign in to search companies with autocomplete, then open a separate insights page.
+      <form className="search-console" onSubmit={(event) => void onSubmit(event)}>
+        <label className="search-label" htmlFor="company-query">
+          Company
+        </label>
+        {!user && (
+          <p className="search-guest-hint">
+            Typing starts a private session automatically.{" "}
+            <button
+              type="button"
+              className="search-guest-link"
+              disabled={!ready}
+              onClick={() =>
+                openAuth({
+                  mode: 'signin',
+                  message: 'Sign in to keep briefs under your email.',
+                })
+              }
+            >
+              Sign in
+            </button>{" "}
+            to save under your email.
           </p>
-          <button
-            type="button"
-            className="btn"
-            disabled={!ready}
-            onClick={() =>
-              openAuth({
-                mode: 'signin',
-                message: 'Sign in to search companies and generate insights.',
-              })
-            }
-          >
-            Sign in to search
+        )}
+        <div className={`search-row${loading ? ' search-row--busy' : ''}`}>
+          <div className="search-input-wrap">
+            <input
+              id="company-query"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              onBlur={() => {
+                window.setTimeout(() => setAutocompleteOpen(false), 120)
+              }}
+              placeholder="Microsoft, Nestlé, Siemens…"
+              aria-label="Company name"
+              aria-autocomplete="list"
+              aria-expanded={autocompleteOpen}
+              aria-controls="company-autocomplete"
+              autoComplete="off"
+            />
+            {autocompleteOpen && autocomplete.length > 0 && (
+              <ul
+                id="company-autocomplete"
+                className="company-autocomplete"
+                role="listbox"
+                aria-label="Company autocomplete"
+              >
+                {autocomplete.map((item, index) => (
+                  <li
+                    key={`ac-${item.source}-${item.name}-${item.location || item.ticker || ''}`}
+                  >
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={index === activeSuggestionIndex}
+                      className={`company-autocomplete-btn${
+                        index === activeSuggestionIndex ? ' is-active' : ''
+                      }`}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onMouseEnter={() => setActiveSuggestionIndex(index)}
+                      onClick={() => void onPickSuggestion(item)}
+                    >
+                      <span className="company-autocomplete-main">
+                        <strong>{item.name}</strong>
+                        {item.description && <span>{item.description}</span>}
+                      </span>
+                      <span className="company-autocomplete-meta">
+                        {Math.round(item.confidence * 100)}%
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {autocompleteLoading && query.trim().length >= 2 && !autocompleteOpen && (
+              <p className="company-autocomplete-status">Finding companies…</p>
+            )}
+          </div>
+          {loading && (
+            <button
+              type="button"
+              className="btn btn-stop"
+              onClick={cancelAnalysis}
+              aria-label="Stop building brief"
+            >
+              Stop
+            </button>
+          )}
+          <button className="btn" type="submit" disabled={!query.trim()}>
+            {loading ? 'Restart' : 'Get insights'}
           </button>
         </div>
-      ) : (
-        <form className="search-console" onSubmit={(event) => void onSubmit(event)}>
-          <label className="search-label" htmlFor="company-query">
-            Company
-          </label>
-          <div className={`search-row${loading ? ' search-row--busy' : ''}`}>
-            <div className="search-input-wrap">
-              <input
-                id="company-query"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                onBlur={() => {
-                  window.setTimeout(() => setAutocompleteOpen(false), 120)
-                }}
-                placeholder="Microsoft, Nestlé, Siemens…"
-                aria-label="Company name"
-                aria-autocomplete="list"
-                aria-expanded={autocompleteOpen}
-                aria-controls="company-autocomplete"
-                autoComplete="off"
-              />
-              {autocompleteOpen && autocomplete.length > 0 && (
-                <ul
-                  id="company-autocomplete"
-                  className="company-autocomplete"
-                  role="listbox"
-                  aria-label="Company autocomplete"
-                >
-                  {autocomplete.map((item, index) => (
-                    <li
-                      key={`ac-${item.source}-${item.name}-${item.location || item.ticker || ''}`}
-                    >
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={index === activeSuggestionIndex}
-                        className={`company-autocomplete-btn${
-                          index === activeSuggestionIndex ? ' is-active' : ''
-                        }`}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onMouseEnter={() => setActiveSuggestionIndex(index)}
-                        onClick={() => void onPickSuggestion(item)}
-                      >
-                        <span className="company-autocomplete-main">
-                          <strong>{item.name}</strong>
-                          {item.description && <span>{item.description}</span>}
-                        </span>
-                        <span className="company-autocomplete-meta">
-                          {Math.round(item.confidence * 100)}%
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {autocompleteLoading && query.trim().length >= 2 && !autocompleteOpen && (
-                <p className="company-autocomplete-status">Finding companies…</p>
-              )}
-            </div>
-            {loading && (
-              <button
-                type="button"
-                className="btn btn-stop"
-                onClick={cancelAnalysis}
-                aria-label="Stop building brief"
-              >
-                Stop
-              </button>
-            )}
-            <button className="btn" type="submit" disabled={!query.trim()}>
-              {loading ? 'Restart' : 'Get insights'}
-            </button>
-          </div>
-        </form>
-      )}
+      </form>
 
       {showProgress && (
         <div className="status-line" role="status" aria-live="polite">
@@ -271,9 +253,9 @@ export function HomePage() {
         </p>
       </section>
 
-      {user ? (
-        <div className="workspace workspace--split home-workspace">
-          {searchStage}
+      <div className={`workspace${user ? ' workspace--split home-workspace' : ''}`}>
+        {searchStage}
+        {user && (
           <BriefLibrary
             recent={recent}
             analysis={analysis}
@@ -290,10 +272,8 @@ export function HomePage() {
             collapsible
             defaultExpanded
           />
-        </div>
-      ) : (
-        searchStage
-      )}
+        )}
+      </div>
     </div>
   )
 }

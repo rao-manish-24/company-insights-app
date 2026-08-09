@@ -3,7 +3,16 @@ import { createPortal } from 'react-dom'
 import { useAuth } from '../hooks/useAuth'
 
 export function AuthModal() {
-  const { authOpen, authMode, authMessage, closeAuth, signIn, register, openAuth } = useAuth()
+  const {
+    authOpen,
+    authMode,
+    authMessage,
+    closeAuth,
+    signIn,
+    register,
+    continuePrivately,
+    openAuth,
+  } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -39,6 +48,18 @@ export function AuthModal() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function onContinuePrivately() {
+    setError(null)
+    setSubmitting(true)
+    try {
+      await continuePrivately()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start a private session')
     } finally {
       setSubmitting(false)
     }
@@ -138,6 +159,24 @@ export function AuthModal() {
                 : 'Create account'}
           </button>
         </form>
+
+        <div className="auth-guest">
+          <p className="auth-guest-divider">
+            <span>Or continue without an account</span>
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary auth-guest-btn"
+            disabled={submitting}
+            onClick={() => void onContinuePrivately()}
+          >
+            {submitting ? 'Starting…' : 'Private session'}
+          </button>
+          <p className="auth-guest-note">
+            No email required. Reuses this browser’s private session when possible (about 24 hours).
+            Email brief needs a signed-in account.
+          </p>
+        </div>
       </div>
     </div>,
     document.body,

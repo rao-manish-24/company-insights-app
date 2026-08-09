@@ -125,6 +125,12 @@ export function loginAccount(payload: {
   })
 }
 
+export function startGuestSession(): Promise<AuthResponse> {
+  return request<AuthResponse>('/auth/guest', {
+    method: 'POST',
+  })
+}
+
 export function fetchMe(): Promise<UserPublic> {
   return request<UserPublic>('/auth/me', { auth: true })
 }

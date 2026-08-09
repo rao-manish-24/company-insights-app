@@ -12,6 +12,31 @@ def test_names_align_rejects_single_letter_substring() -> None:
     assert names_align("Tesla", "Tesla, Inc.") is True
     assert names_align("Advanced Micro Device", "Advanced Micro Devices, Inc.") is True
     assert names_align("Applied Micro Devices", "Advanced Micro Devices, Inc.") is False
+    assert names_align("Google", "Alphabet Inc.") is True
+    assert names_align("Facebook", "Meta Platforms, Inc.") is True
+
+
+def test_assert_valid_company_accepts_google_via_alphabet_ticker() -> None:
+    assert_valid_company(
+        "Google",
+        profile={},
+        market={"ticker": "GOOGL", "name": "Alphabet Inc."},
+    )
+
+
+def test_assert_valid_company_rejects_given_name() -> None:
+    try:
+        assert_valid_company(
+            "Manish",
+            profile={
+                "matched_label": "Manish",
+                "matched_description": "male given name",
+            },
+            market={},
+        )
+        raise AssertionError("expected BadRequestError")
+    except BadRequestError as exc:
+        assert "Not a valid company name" in exc.detail
 
 
 def test_assert_valid_company_rejects_junk() -> None:

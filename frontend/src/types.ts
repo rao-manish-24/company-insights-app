@@ -149,6 +149,7 @@ export interface UserPublic {
   id: number
   email: string
   display_name?: string | null
+  is_guest?: boolean
   created_at: string
 }
 

@@ -4,10 +4,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
-import { fetchMe, loginAccount, registerAccount } from '../api'
+import { fetchMe, loginAccount, registerAccount, startGuestSession } from '../api'
 import { clearAuthToken, getAuthToken, setAuthToken } from '../auth'
 import type { UserPublic } from '../types'
 
@@ -24,6 +25,8 @@ interface AuthContextValue {
   closeAuth: () => void
   signIn: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, displayName?: string) => Promise<void>
+  /** Reuse a valid guest token when possible; otherwise mint a short-lived private session. */
+  continuePrivately: () => Promise<UserPublic>
   signOut: () => void
   clearPendingCompany: () => void
 }
@@ -37,6 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authMode, setAuthMode] = useState<AuthMode>('signin')
   const [authMessage, setAuthMessage] = useState<string | null>(null)
   const [pendingCompany, setPendingCompany] = useState<string | null>(null)
+  const guestBootRef = useRef<Promise<UserPublic> | null>(null)
+  const userRef = useRef<UserPublic | null>(null)
+  userRef.current = user
 
   useEffect(() => {
     const token = getAuthToken()
@@ -99,6 +105,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const continuePrivately = useCallback(async (): Promise<UserPublic> => {
+    const current = userRef.current
+    if (current) return current
+    if (guestBootRef.current) return guestBootRef.current
+
+    const boot = (async () => {
+      const existing = getAuthToken()
+      if (existing) {
+        try {
+          const me = await fetchMe()
+          setUser(me)
+          setAuthOpen(false)
+          setAuthMessage(null)
+          return me
+        } catch {
+          clearAuthToken()
+        }
+      }
+
+      const result = await startGuestSession()
+      setAuthToken(result.access_token)
+      setUser(result.user)
+      setAuthOpen(false)
+      setAuthMessage(null)
+      return result.user
+    })()
+
+    guestBootRef.current = boot
+    try {
+      return await boot
+    } finally {
+      if (guestBootRef.current === boot) guestBootRef.current = null
+    }
+  }, [])
+
   const signOut = useCallback(() => {
     clearAuthToken()
     setUser(null)
@@ -119,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       closeAuth,
       signIn,
       register,
+      continuePrivately,
       signOut,
       clearPendingCompany,
     }),
@@ -133,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       closeAuth,
       signIn,
       register,
+      continuePrivately,
       signOut,
       clearPendingCompany,
     ],

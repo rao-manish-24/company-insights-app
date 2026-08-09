@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { expandInsight } from '../api'
+import { useAuth } from '../hooks/useAuth'
 import type {
   CompanyAnalysis,
   CompanyProfile,
@@ -85,6 +86,8 @@ type OpenInsight = {
 }
 
 export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
+  const { user, openAuth } = useAuth()
+  const canEmail = Boolean(user && !user.is_guest)
   const [showEmail, setShowEmail] = useState(false)
   const [openInsight, setOpenInsight] = useState<OpenInsight | null>(null)
   const [expandLoading, setExpandLoading] = useState(false)
@@ -275,9 +278,18 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
               <button
                 className="btn btn-secondary"
                 type="button"
-                onClick={() => setShowEmail((value) => !value)}
+                onClick={() => {
+                  if (!canEmail) {
+                    openAuth({
+                      mode: 'signin',
+                      message: 'Sign in to email briefs from your account.',
+                    })
+                    return
+                  }
+                  setShowEmail((value) => !value)
+                }}
               >
-                {showEmail ? 'Hide email' : 'Email brief'}
+                {canEmail ? (showEmail ? 'Hide email' : 'Email brief') : 'Email brief (sign in)'}
               </button>
             </div>
           </div>
@@ -371,7 +383,7 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
         <p className="summary">{analysis.executive_summary}</p>
       </section>
 
-      {showEmail && (
+      {showEmail && canEmail && (
         <section className="brief-section brief-section--email">
           <EmailBriefForm analysisId={analysis.id} />
         </section>

@@ -155,6 +155,13 @@ async def analyze_company(
         limit=settings.analyze_rate_limit,
         window_seconds=settings.analyze_rate_window_seconds,
     )
+    # Private sessions get a tighter per-user budget on top of the shared IP limit.
+    if user.is_guest:
+        analyze_rate_limiter.check(
+            f"analyze-guest:{user.id}",
+            limit=settings.guest_analyze_rate_limit,
+            window_seconds=settings.analyze_rate_window_seconds,
+        )
 
     result = await service.analyze(
         company_name,
@@ -170,7 +177,9 @@ async def analyze_company(
         result.llm_model,
     )
 
-    should_email = payload.send_email or settings.email_auto_send
+    should_email = (payload.send_email or settings.email_auto_send) and not user.is_guest
+    if payload.send_email and user.is_guest:
+        raise BadRequestError("Email brief requires a signed-in account.")
     if should_email:
         row = service.get_by_id(result.id, user_id=user.id)
         if row:
@@ -211,6 +220,9 @@ async def email_analysis(
     service: AnalysisService = Depends(get_analysis_service),
     email_service: EmailService = Depends(get_email_service),
 ) -> EmailBriefResponse:
+    if user.is_guest:
+        raise BadRequestError("Email brief requires a signed-in account.")
+
     row = service.get_by_id(analysis_id, user_id=user.id)
     if not row:
         raise NotFoundError("Analysis not found")

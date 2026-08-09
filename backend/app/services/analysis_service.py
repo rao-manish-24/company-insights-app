@@ -230,10 +230,9 @@ class AnalysisService:
         if not profile:
             profile = empty_profile()
         profile = self.market_service.apply_to_profile(profile, market)
-        # Suggestion picks are already user-confirmed company names.
-        # Otherwise keep the wiki/market guard (now includes brands / brokerages).
-        if not confirmed:
-            assert_valid_company(cleaned_name, profile=profile, market=market)
+        # Always validate company-ness. `confirmed` only skips resolve ambiguity,
+        # not person/given-name pages that slipped into autocomplete.
+        assert_valid_company(cleaned_name, profile=profile, market=market)
 
         articles = await self.news_service.fetch_company_news(cleaned_name)
         logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))

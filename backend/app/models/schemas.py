@@ -141,6 +141,7 @@ class UserPublic(BaseModel):
     id: int
     email: str
     display_name: str | None = None
+    is_guest: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

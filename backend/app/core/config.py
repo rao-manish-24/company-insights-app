@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-only-change-me-company-insights-jwt"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7
+    # Private/guest sessions are shorter-lived than registered accounts.
+    guest_jwt_expire_minutes: int = 60 * 24
+    guest_analyze_rate_limit: int = 8
+    guest_retention_hours: int = 48
 
     # Persistent admin account ensured on every API startup.
     # Sign in with ADMIN_USERNAME or ADMIN_EMAIL + ADMIN_PASSWORD.

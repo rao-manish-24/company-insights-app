@@ -28,15 +28,20 @@ def create_access_token(
     user_id: int,
     email: str,
     settings: Settings | None = None,
+    expire_minutes: int | None = None,
+    is_guest: bool = False,
 ) -> str:
     cfg = settings or get_settings()
     now = datetime.now(timezone.utc)
+    lifetime = expire_minutes if expire_minutes is not None else cfg.jwt_expire_minutes
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "email": email,
         "iat": now,
-        "exp": now + timedelta(minutes=cfg.jwt_expire_minutes),
+        "exp": now + timedelta(minutes=lifetime),
     }
+    if is_guest:
+        payload["guest"] = True
     return jwt.encode(payload, cfg.jwt_secret, algorithm=cfg.jwt_algorithm)
 
 

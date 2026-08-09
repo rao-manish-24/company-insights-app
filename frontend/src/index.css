@@ -369,6 +369,78 @@ ol {
   margin-top: 0.15rem;
 }
 
+.auth-guest {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.15rem;
+}
+
+.auth-guest-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.auth-guest-divider::before,
+.auth-guest-divider::after {
+  content: '';
+  height: 1px;
+  background: rgba(7, 21, 37, 0.1);
+}
+
+.auth-guest-btn {
+  width: 100%;
+}
+
+.auth-guest-note {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.search-locked-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.search-guest-hint {
+  margin: 0 0 0.15rem;
+  color: var(--slate);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.search-guest-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--teal-deep);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.search-guest-link:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.topbar-user-email.is-guest {
+  color: var(--teal-deep);
+  font-weight: 700;
+}
+
 .company-suggestions {
   display: grid;
   gap: 0.65rem;

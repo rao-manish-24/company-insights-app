@@ -119,6 +119,22 @@ def test_wikipedia_exact_brand_scores_high() -> None:
     assert service._should_auto_analyze("SpaceXAI", suggestion, [suggestion]) is True
 
 
+def test_wikipedia_given_name_is_not_company_grade() -> None:
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    suggestion = CompanySuggestion(
+        name="Manish",
+        description=(
+            "Manish (also Maneesh) is a common Hindu masculine given name that literally "
+            "means The God of the Mind"
+        ),
+        confidence=1.0,
+        source="wikipedia",
+        match_kind="exact",
+    )
+    assert service._is_company_grade(suggestion) is False
+    assert service._should_auto_analyze("Manish", suggestion, [suggestion]) is False
+
+
 def test_short_brand_with_holdings_is_brand_suffix() -> None:
     """Q2 Holdings collapses to 'q2' after normalize — still a real company suggestion."""
     service = CompanyLookupService.__new__(CompanyLookupService)
