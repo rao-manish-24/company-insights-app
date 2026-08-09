@@ -63,6 +63,7 @@ type CompanyInsightsContextValue = {
     forceRefresh?: boolean,
     options?: { skipResolve?: boolean; confirmed?: boolean },
   ) => Promise<RunAnalysisResult>
+  cancelAnalysis: () => void
   pickSuggestion: (suggestion: CompanySuggestion) => Promise<RunAnalysisResult>
   onSearchKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
   openRecent: (id: number) => Promise<RunAnalysisResult>
@@ -94,9 +95,28 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const [, startTransition] = useTransition()
   const requestIdRef = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
   const autocompleteSeqRef = useRef(0)
   /** Only fetch/open autocomplete after the user edits the search box. */
   const autocompleteLiveRef = useRef(false)
+
+  const beginRequest = useCallback(() => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const requestId = ++requestIdRef.current
+    return { requestId, signal: controller.signal }
+  }, [])
+
+  const cancelAnalysis = useCallback(() => {
+    requestIdRef.current += 1
+    abortRef.current?.abort()
+    abortRef.current = null
+    setLoading(false)
+    setRunMetrics(null)
+    setError(null)
+    setSuggestionMessage(null)
+  }, [])
 
   const handleAuthError = useCallback(
     (err: unknown, pending?: string) => {
@@ -187,12 +207,13 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       companyName: string,
       forceRefresh: boolean,
       requestId: number,
-      options?: { confirmed?: boolean },
+      options?: { confirmed?: boolean; signal?: AbortSignal },
     ): Promise<RunAnalysisResult> => {
       const started = performance.now()
       setLoadingMode('analyze')
       const result = await analyzeCompany(companyName, forceRefresh, {
         confirmed: options?.confirmed,
+        signal: options?.signal,
       })
       if (requestId !== requestIdRef.current) return 'aborted'
       const clientElapsed = performance.now() - started
@@ -243,7 +264,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
         return 'auth'
       }
 
-      const requestId = ++requestIdRef.current
+      const { requestId, signal } = beginRequest()
       setLoading(true)
       setLoadingMode('analyze')
       setRunMetrics(null)
@@ -260,7 +281,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       try {
         let target = trimmed
         if (!options?.skipResolve) {
-          const resolution = await resolveCompany(trimmed)
+          const resolution = await resolveCompany(trimmed, { signal })
           if (requestId !== requestIdRef.current) return 'aborted'
 
           if (resolution.status === 'not_found') {
@@ -291,9 +312,11 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
 
         return await executeAnalyze(target, forceRefresh, requestId, {
           confirmed: Boolean(options?.confirmed),
+          signal,
         })
       } catch (err) {
         if (requestId !== requestIdRef.current) return 'aborted'
+        if (err instanceof ApiError && err.cancelled) return 'aborted'
         if (handleAuthError(err, trimmed)) {
           setError(null)
           return 'auth'
@@ -306,10 +329,13 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       } finally {
         if (requestId === requestIdRef.current) {
           setLoading(false)
+          if (abortRef.current?.signal === signal) {
+            abortRef.current = null
+          }
         }
       }
     },
-    [user, openAuth, handleAuthError, executeAnalyze, clearAutocomplete],
+    [user, openAuth, handleAuthError, executeAnalyze, clearAutocomplete, beginRequest],
   )
 
   const updateQuery = useCallback(
@@ -340,7 +366,8 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       return
     }
     const trimmed = query.trim()
-    if (loading || !autocompleteLiveRef.current || trimmed.length < 2 || !/[A-Za-z]/.test(trimmed)) {
+    // Keep autocomplete available while a brief builds so the user can edit / pivot.
+    if (!autocompleteLiveRef.current || trimmed.length < 2 || !/[A-Za-z]/.test(trimmed)) {
       setAutocomplete([])
       setAutocompleteOpen(false)
       setActiveSuggestionIndex(-1)
@@ -376,7 +403,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
     return () => {
       window.clearTimeout(timer)
     }
-  }, [query, loading, user, clearAutocomplete, startTransition])
+  }, [query, user, clearAutocomplete, startTransition])
 
   const pickSuggestion = useCallback(
     async (suggestion: CompanySuggestion): Promise<RunAnalysisResult> => {
@@ -448,7 +475,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
         })
         return 'auth'
       }
-      const requestId = ++requestIdRef.current
+      const { requestId, signal } = beginRequest()
       setLoading(true)
       setLoadingMode('open')
       setRunMetrics(null)
@@ -457,7 +484,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       setSuggestionMessage(null)
       clearAutocomplete()
       try {
-        const result = await getAnalysis(id)
+        const result = await getAnalysis(id, { signal })
         if (requestId !== requestIdRef.current) return 'aborted'
         setAnalysis(result)
         setQueryState(result.company_name)
@@ -465,16 +492,20 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
         return 'analyzed'
       } catch (err) {
         if (requestId !== requestIdRef.current) return 'aborted'
+        if (err instanceof ApiError && err.cancelled) return 'aborted'
         if (handleAuthError(err)) return 'auth'
         setError(err instanceof Error ? err.message : 'Could not load analysis')
         return 'error'
       } finally {
         if (requestId === requestIdRef.current) {
           setLoading(false)
+          if (abortRef.current?.signal === signal) {
+            abortRef.current = null
+          }
         }
       }
     },
-    [user, openAuth, handleAuthError, clearAutocomplete],
+    [user, openAuth, handleAuthError, clearAutocomplete, beginRequest],
   )
 
   const value = useMemo<CompanyInsightsContextValue>(
@@ -499,6 +530,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       loadingMode,
       runMetrics,
       runAnalysis,
+      cancelAnalysis,
       pickSuggestion,
       onSearchKeyDown,
       openRecent,
@@ -526,6 +558,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       loadingMode,
       runMetrics,
       runAnalysis,
+      cancelAnalysis,
       pickSuggestion,
       onSearchKeyDown,
       openRecent,

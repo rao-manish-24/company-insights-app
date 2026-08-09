@@ -13,11 +13,13 @@ import type {
 
 export class ApiError extends Error {
   status: number
+  cancelled: boolean
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, options?: { cancelled?: boolean }) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.cancelled = Boolean(options?.cancelled)
   }
 }
 
@@ -48,8 +50,13 @@ async function request<T>(
   init?: RequestInit & { auth?: boolean },
 ): Promise<T> {
   const controller = new AbortController()
+  const { auth = false, signal: userSignal, ...fetchInit } = init || {}
+  const onUserAbort = () => controller.abort()
+  if (userSignal) {
+    if (userSignal.aborted) controller.abort()
+    else userSignal.addEventListener('abort', onUserAbort, { once: true })
+  }
   const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
-  const { auth = false, ...fetchInit } = init || {}
   const headers: Record<string, string> = {
     Accept: 'application/json',
     ...(fetchInit.body ? { 'Content-Type': 'application/json' } : {}),
@@ -63,7 +70,7 @@ async function request<T>(
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       ...fetchInit,
-      signal: fetchInit.signal ?? controller.signal,
+      signal: controller.signal,
       headers,
     })
 
@@ -82,6 +89,9 @@ async function request<T>(
   } catch (err) {
     if (err instanceof ApiError) throw err
     if (err instanceof DOMException && err.name === 'AbortError') {
+      if (userSignal?.aborted) {
+        throw new ApiError('Search stopped.', 499, { cancelled: true })
+      }
       throw new ApiError('Request timed out. Please try again.', 408)
     }
     throw new ApiError(
@@ -90,6 +100,7 @@ async function request<T>(
     )
   } finally {
     window.clearTimeout(timeout)
+    userSignal?.removeEventListener('abort', onUserAbort)
   }
 }
 
@@ -118,11 +129,15 @@ export function fetchMe(): Promise<UserPublic> {
   return request<UserPublic>('/auth/me', { auth: true })
 }
 
-export function resolveCompany(query: string): Promise<CompanyResolution> {
+export function resolveCompany(
+  query: string,
+  options?: { signal?: AbortSignal },
+): Promise<CompanyResolution> {
   return request<CompanyResolution>('/companies/resolve', {
     method: 'POST',
     auth: true,
     body: JSON.stringify({ query }),
+    signal: options?.signal,
   })
 }
 
@@ -138,7 +153,7 @@ export async function suggestCompanies(query: string): Promise<CompanySuggestion
 export function analyzeCompany(
   companyName: string,
   forceRefresh = false,
-  options?: { confirmed?: boolean },
+  options?: { confirmed?: boolean; signal?: AbortSignal },
 ): Promise<CompanyAnalysis> {
   return request<CompanyAnalysis>('/analyze', {
     method: 'POST',
@@ -148,6 +163,7 @@ export function analyzeCompany(
       force_refresh: forceRefresh,
       confirmed: Boolean(options?.confirmed),
     }),
+    signal: options?.signal,
   })
 }
 
@@ -162,8 +178,14 @@ export function clearAnalysesHistory(): Promise<{ status: string; deleted: numbe
   })
 }
 
-export function getAnalysis(id: number): Promise<CompanyAnalysis> {
-  return request<CompanyAnalysis>(`/analyses/${id}`, { auth: true })
+export function getAnalysis(
+  id: number,
+  options?: { signal?: AbortSignal },
+): Promise<CompanyAnalysis> {
+  return request<CompanyAnalysis>(`/analyses/${id}`, {
+    auth: true,
+    signal: options?.signal,
+  })
 }
 
 export interface EmailBriefResult {

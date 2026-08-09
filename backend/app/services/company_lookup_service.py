@@ -13,6 +13,7 @@ import httpx
 from app.services.company_validation import (
     description_looks_like_company,
     normalize_name,
+    stemmed_tokens,
 )
 from app.services.market_data_service import MarketDataService
 
@@ -142,16 +143,18 @@ class CompanyLookupService:
 
         out: list[CompanySuggestion] = []
         seen_domains: set[str] = set()
-        try:
-            rows = self._fetch_clearbit(cleaned, client=self._suggest_client)
-            self._ingest_clearbit_rows(parts, rows, out=out, seen_domains=seen_domains)
-        except Exception:
-            logger.warning("Autocomplete suggest failed query=%r", cleaned, exc_info=True)
+        for term in self._near_query_variants(cleaned):
+            try:
+                rows = self._fetch_clearbit(term, client=self._suggest_client)
+                self._ingest_clearbit_rows(parts, rows, out=out, seen_domains=seen_domains)
+            except Exception:
+                logger.warning(
+                    "Autocomplete suggest failed query=%r term=%r", cleaned, term, exc_info=True
+                )
 
-        # Short brands/tickers (q2, gm, ba): Clearbit often returns unrelated Q* names.
-        # Yahoo equity search recovers the real issuer (e.g. Q2 Holdings / QTWO).
+        # Short brands/tickers + plural near-misses: Yahoo recovers AMD / Q2 / etc.
         strong = [item for item in out if item.confidence >= AUTOCOMPLETE_CONFIDENCE]
-        if len(cleaned) <= 4 and len(strong) < 2:
+        if len(strong) < 2:
             try:
                 out.extend(self._yahoo_candidates(parts))
             except Exception:
@@ -331,8 +334,32 @@ class CompanyLookupService:
             clearbit = fut_clear.result()
         return wiki + wikipedia + yahoo + clearbit
 
+    def _near_query_variants(self, query: str) -> list[str]:
+        """Plural/singular last-token variants (Device ↔ Devices)."""
+        cleaned = " ".join((query or "").strip().split())
+        if not cleaned:
+            return []
+        variants = [cleaned]
+        tokens = cleaned.split()
+        if len(tokens) >= 2:
+            last = tokens[-1]
+            low = last.lower()
+            if len(low) > 3 and low.endswith("s") and not low.endswith(("ss", "us", "is", "oes")):
+                variants.append(" ".join(tokens[:-1] + [last[:-1]]))
+            elif len(low) > 2 and not low.endswith("s"):
+                variants.append(" ".join(tokens[:-1] + [last + "s"]))
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for term in variants:
+            key = term.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            ordered.append(term)
+        return ordered
+
     def _clearbit_search_terms(self, query: str) -> list[str]:
-        terms = [query]
+        terms = list(self._near_query_variants(query))
         q = query.strip()
         if " " not in q and 3 <= len(q) <= 8:
             terms.extend(f"{q} {suffix}" for suffix in _SHORT_QUERY_PROBES)
@@ -560,23 +587,36 @@ class CompanyLookupService:
 
     def _wikipedia_candidates(self, parts: _QueryParts) -> list[CompanySuggestion]:
         """English Wikipedia search — catches new brand names Clearbit/Yahoo miss (e.g. SpaceXAI)."""
-        try:
-            response = self._client.get(
-                WIKIPEDIA_API,
-                params={
-                    "action": "query",
-                    "list": "search",
-                    "srsearch": parts.raw,
-                    "srlimit": 8,
-                    "format": "json",
-                },
-            )
-            response.raise_for_status()
-        except Exception:
-            logger.warning("Wikipedia company lookup failed query=%r", parts.raw, exc_info=True)
-            return []
+        hits: list[dict[str, Any]] = []
+        seen_page_ids: set[int] = set()
+        for term in self._near_query_variants(parts.raw):
+            try:
+                response = self._client.get(
+                    WIKIPEDIA_API,
+                    params={
+                        "action": "query",
+                        "list": "search",
+                        "srsearch": term,
+                        "srlimit": 8,
+                        "format": "json",
+                    },
+                )
+                response.raise_for_status()
+            except Exception:
+                logger.warning(
+                    "Wikipedia company lookup failed query=%r term=%r", parts.raw, term, exc_info=True
+                )
+                continue
+            for hit in ((response.json().get("query") or {}).get("search")) or []:
+                if not isinstance(hit, dict):
+                    continue
+                page_id = hit.get("pageid")
+                if isinstance(page_id, int):
+                    if page_id in seen_page_ids:
+                        continue
+                    seen_page_ids.add(page_id)
+                hits.append(hit)
 
-        hits = ((response.json().get("query") or {}).get("search")) or []
         out: list[CompanySuggestion] = []
         seen: set[str] = set()
         for hit in hits:
@@ -613,7 +653,7 @@ class CompanyLookupService:
         return out
 
     def _wikidata_candidates(self, parts: _QueryParts) -> list[CompanySuggestion]:
-        searches = [parts.raw]
+        searches = list(self._near_query_variants(parts.raw))
         results: list[dict[str, Any]] = []
         seen_ids: set[str] = set()
 
@@ -639,10 +679,13 @@ class CompanyLookupService:
                     seen_ids.add(qid)
                 results.append(item)
 
-        try:
-            _pull(searches[0])
-        except Exception:
-            logger.warning("Wikidata company lookup failed query=%r", parts.raw, exc_info=True)
+        for term in searches[:2]:
+            try:
+                _pull(term)
+            except Exception:
+                logger.warning(
+                    "Wikidata company lookup failed query=%r term=%r", parts.raw, term, exc_info=True
+                )
 
         # Second search only if the first pass lacked company-grade labels.
         company_hits = 0
@@ -684,11 +727,20 @@ class CompanyLookupService:
         return out
 
     def _yahoo_candidates(self, parts: _QueryParts) -> list[CompanySuggestion]:
-        try:
-            quotes = self.market_service._search_quotes(parts.raw)  # noqa: SLF001
-        except Exception:
-            logger.exception("Yahoo company lookup failed query=%r", parts.raw)
-            return []
+        quotes: list[dict[str, Any]] = []
+        seen_symbols: set[str] = set()
+        for term in self._near_query_variants(parts.raw):
+            try:
+                batch = self.market_service._search_quotes(term)  # noqa: SLF001
+            except Exception:
+                logger.exception("Yahoo company lookup failed query=%r term=%r", parts.raw, term)
+                continue
+            for quote in batch:
+                symbol = str(quote.get("symbol") or "").upper()
+                if not symbol or symbol in seen_symbols:
+                    continue
+                seen_symbols.add(symbol)
+                quotes.append(quote)
 
         out: list[CompanySuggestion] = []
         for quote in quotes:
@@ -734,6 +786,9 @@ class CompanyLookupService:
         if self._is_query_plus_corp_suffix(parts, label):
             return "brand_suffix"
         if parts.norm == c or parts.compact == c_compact:
+            return "exact"
+        # "Advanced Micro Device" ≈ "Advanced Micro Devices"
+        if stemmed_tokens(parts.norm) and stemmed_tokens(parts.norm) == stemmed_tokens(c):
             return "exact"
         if self._is_brand_with_corp_noise(parts.norm, c):
             return "brand_suffix"

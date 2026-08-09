@@ -39,6 +39,7 @@ export function InsightsPage() {
     historyLoaded,
     loading,
     runAnalysis,
+    cancelAnalysis,
     openRecent,
     loadHistory,
     clearHistory,
@@ -81,6 +82,11 @@ export function InsightsPage() {
           <Link className="btn btn-secondary" to="/">
             ← New search
           </Link>
+          {loading && (
+            <button type="button" className="btn btn-stop" onClick={cancelAnalysis}>
+              Stop
+            </button>
+          )}
           {analysis && (
             <button
               type="button"

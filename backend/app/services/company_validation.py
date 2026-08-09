@@ -66,8 +66,22 @@ def normalize_name(value: str) -> str:
     return " ".join(cleaned.split())
 
 
+def stem_token(token: str) -> str:
+    """Light plural stem so Device ≈ Devices (not a full NLP stemmer)."""
+    t = (token or "").lower()
+    if len(t) > 4 and t.endswith("ies"):
+        return t[:-3] + "y"
+    if len(t) > 3 and t.endswith("s") and not t.endswith(("ss", "us", "is", "oes")):
+        return t[:-1]
+    return t
+
+
+def stemmed_tokens(value: str) -> tuple[str, ...]:
+    return tuple(stem_token(tok) for tok in normalize_name(value).split() if tok)
+
+
 def names_align(query: str, candidate: str | None) -> bool:
-    """Require real lexical overlap — not 'k' ⊆ 'kelvin'."""
+    """Require real lexical overlap — not 'k' ⊆ 'kelvin' or 'apple' ⊆ 'apple hospitality'."""
     q = normalize_name(query)
     c = normalize_name(candidate or "")
     if not q or not c:
@@ -79,18 +93,38 @@ def names_align(query: str, candidate: str | None) -> bool:
 
     if q == c:
         return True
+
+    # Near-plural phrases: "Advanced Micro Device" ≈ "Advanced Micro Devices"
+    q_stem = stemmed_tokens(q)
+    c_stem = stemmed_tokens(c)
+    if q_stem and q_stem == c_stem:
+        return True
+
+    q_tokens = q.split()
+    c_tokens = c.split()
+    if not q_tokens or not c_tokens:
+        return False
+
+    # Single-token brands ("Apple", "Tesla"): match the brand core only.
+    # Token-overlap used to accept "Apple Hospitality REIT" for query "Apple".
+    if len(q_tokens) == 1:
+        if stem_token(c_tokens[0]) != stem_token(q_tokens[0]):
+            return False
+        return len(c_tokens) == 1
+
     if q in c or c in q:
         # Avoid tiny substring hits inside much longer unrelated labels.
         shorter, longer = (q, c) if len(q) <= len(c) else (c, q)
         if len(shorter) >= 3 and (len(shorter) / max(len(longer), 1)) >= 0.45:
             return True
 
-    q_tokens = set(q.split())
-    c_tokens = set(c.split())
-    if not q_tokens or not c_tokens:
-        return False
-    overlap = q_tokens & c_tokens
-    return len(overlap) >= 1 and (len(overlap) / len(q_tokens)) >= 0.6
+    q_set, c_set = set(q_tokens), set(c_tokens)
+    overlap = q_set & c_set
+    # Prefer stem overlap for multi-word near misses.
+    stem_overlap = set(q_stem) & set(c_stem)
+    if stem_overlap and (len(stem_overlap) / max(len(q_stem), 1)) >= 0.8 and len(q_stem) >= 2:
+        return True
+    return len(overlap) >= 1 and (len(overlap) / len(q_set)) >= 0.6
 
 
 def description_looks_like_company(description: str | None) -> bool:

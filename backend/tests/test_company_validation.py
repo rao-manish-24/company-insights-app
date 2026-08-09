@@ -7,6 +7,11 @@ def test_names_align_rejects_single_letter_substring() -> None:
     assert names_align("m", "metre") is False
     assert names_align("Microsoft", "Microsoft Corporation") is True
     assert names_align("MSFT", "MSFT") is True
+    assert names_align("Apple", "Apple Inc.") is True
+    assert names_align("Apple", "Apple Hospitality REIT, Inc.") is False
+    assert names_align("Tesla", "Tesla, Inc.") is True
+    assert names_align("Advanced Micro Device", "Advanced Micro Devices, Inc.") is True
+    assert names_align("Applied Micro Devices", "Advanced Micro Devices, Inc.") is False
 
 
 def test_assert_valid_company_rejects_junk() -> None:

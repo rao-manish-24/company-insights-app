@@ -28,6 +28,7 @@ export function HomePage() {
     setAutocompleteOpen,
     setActiveSuggestionIndex,
     runAnalysis,
+    cancelAnalysis,
     pickSuggestion,
     onSearchKeyDown,
   } = useCompanyInsights()
@@ -42,6 +43,7 @@ export function HomePage() {
       })
       return
     }
+    // Starting a new run aborts any in-flight analyze via beginRequest().
     await runAnalysis(query)
   }
 
@@ -116,7 +118,7 @@ export function HomePage() {
               <label className="search-label" htmlFor="company-query">
                 Company
               </label>
-              <div className="search-row">
+              <div className={`search-row${loading ? ' search-row--busy' : ''}`}>
                 <div className="search-input-wrap">
                   <input
                     id="company-query"
@@ -131,7 +133,6 @@ export function HomePage() {
                     aria-autocomplete="list"
                     aria-expanded={autocompleteOpen}
                     aria-controls="company-autocomplete"
-                    disabled={loading}
                     autoComplete="off"
                   />
                   {autocompleteOpen && autocomplete.length > 0 && (
@@ -155,7 +156,6 @@ export function HomePage() {
                             onMouseDown={(event) => event.preventDefault()}
                             onMouseEnter={() => setActiveSuggestionIndex(index)}
                             onClick={() => void onPickSuggestion(item)}
-                            disabled={loading}
                           >
                             <span className="company-autocomplete-main">
                               <strong>{item.name}</strong>
@@ -173,8 +173,18 @@ export function HomePage() {
                     <p className="company-autocomplete-status">Finding companies…</p>
                   )}
                 </div>
-                <button className="btn" type="submit" disabled={loading || !query.trim()}>
-                  {loading ? 'Building…' : 'Get insights'}
+                {loading && (
+                  <button
+                    type="button"
+                    className="btn btn-stop"
+                    onClick={cancelAnalysis}
+                    aria-label="Stop building brief"
+                  >
+                    Stop
+                  </button>
+                )}
+                <button className="btn" type="submit" disabled={!query.trim()}>
+                  {loading ? 'Restart' : 'Get insights'}
                 </button>
               </div>
             </form>
@@ -188,6 +198,18 @@ export function HomePage() {
                 metrics={runMetrics}
                 defaultExpanded={progressDefaultExpanded}
               />
+              {loading && loadingMode === 'analyze' && (
+                <div className="home-brief-ready-actions">
+                  <button
+                    type="button"
+                    className="btn btn-stop"
+                    onClick={cancelAnalysis}
+                    aria-label="Stop building brief"
+                  >
+                    Stop search
+                  </button>
+                </div>
+              )}
               {briefReady && (
                 <div className="home-brief-ready-actions">
                   <button

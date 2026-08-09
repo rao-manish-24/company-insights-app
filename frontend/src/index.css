@@ -541,6 +541,20 @@ ol {
   align-items: center;
 }
 
+.search-row--busy {
+  grid-template-columns: 1fr auto auto;
+}
+
+.btn-stop {
+  background: linear-gradient(180deg, #7f1d1d 0%, #991b1b 100%);
+  color: #fff;
+}
+
+.btn-stop:hover:not(:disabled) {
+  background: linear-gradient(180deg, #9f2424 0%, #b91c1c 100%);
+  box-shadow: 0 12px 24px rgba(153, 27, 27, 0.2);
+}
+
 .search-input-wrap {
   position: relative;
   min-width: 0;
@@ -2781,7 +2795,8 @@ ol {
   }
 
   .search-row,
-  .email-row {
+  .email-row,
+  .search-row--busy {
     grid-template-columns: 1fr;
   }
 

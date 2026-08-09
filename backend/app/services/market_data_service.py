@@ -18,6 +18,32 @@ USER_AGENT = "CompanyInsights/1.1 (partner briefing prototype; educational use)"
 
 _TICKER_RE = re.compile(r"^[A-Z][A-Z0-9.\-]{0,11}$")
 
+# Mega-cap fallbacks when Yahoo search is empty/rate-limited (common in free-tier bursts).
+_KNOWN_TICKERS: dict[str, str] = {
+    "apple": "AAPL",
+    "apple inc": "AAPL",
+    "microsoft": "MSFT",
+    "microsoft corporation": "MSFT",
+    "tesla": "TSLA",
+    "tesla inc": "TSLA",
+    "amazon": "AMZN",
+    "amazon.com": "AMZN",
+    "google": "GOOGL",
+    "alphabet": "GOOGL",
+    "alphabet inc": "GOOGL",
+    "meta": "META",
+    "meta platforms": "META",
+    "nvidia": "NVDA",
+    "netflix": "NFLX",
+    "intel": "INTC",
+    "ibm": "IBM",
+    "oracle": "ORCL",
+    "salesforce": "CRM",
+    "adobe": "ADBE",
+    "amd": "AMD",
+    "advanced micro devices": "AMD",
+}
+
 
 def empty_market() -> dict[str, Any]:
     return {
@@ -155,7 +181,7 @@ class MarketDataService:
         return profile
 
     def _resolve_ticker(self, company_name: str) -> str | None:
-        from app.services.company_validation import names_align
+        from app.services.company_validation import names_align, normalize_name
 
         compact = company_name.strip().upper().replace(" ", "")
         # Only treat short tokens as tickers (MSFT, BRK.B) — not full names.
@@ -163,26 +189,85 @@ class MarketDataService:
             if self._chart_meta(compact):
                 return compact
 
-        quotes = self._search_quotes(company_name)
-        preferred_types = {"EQUITY", "ETF"}
+        search_terms = [company_name]
+        tokens = company_name.strip().split()
+        if len(tokens) >= 2:
+            last = tokens[-1]
+            low = last.lower()
+            if len(low) > 3 and low.endswith("s") and not low.endswith(("ss", "us", "is", "oes")):
+                search_terms.append(" ".join(tokens[:-1] + [last[:-1]]))
+            elif len(low) > 2 and not low.endswith("s"):
+                search_terms.append(" ".join(tokens[:-1] + [last + "s"]))
+
+        quotes: list[dict[str, Any]] = []
+        seen_symbols: set[str] = set()
+        for term in search_terms:
+            batch = self._search_quotes(term)
+            if not batch and term == company_name:
+                # One retry — Yahoo search often blips under free-tier pressure.
+                time.sleep(0.35)
+                batch = self._search_quotes(term)
+            for quote in batch:
+                symbol = str(quote.get("symbol") or "").upper()
+                if not symbol or symbol in seen_symbols:
+                    continue
+                seen_symbols.add(symbol)
+                quotes.append(quote)
+
+        preferred_types = {"EQUITY"}
         ranked = [
             quote
             for quote in quotes
             if quote.get("symbol") and (quote.get("quoteType") or "").upper() in preferred_types
         ]
         if not ranked:
+            ranked = [
+                quote
+                for quote in quotes
+                if quote.get("symbol") and (quote.get("quoteType") or "").upper() == "ETF"
+            ]
+        if not ranked:
             ranked = [quote for quote in quotes if quote.get("symbol")]
 
-        # Require a real name/ticker alignment — never take ranked[0] blindly
-        # (that mapped "k"/"m" onto unrelated FX/unit-like hits).
+        exact: list[dict[str, Any]] = []
+        aligned: list[dict[str, Any]] = []
         for quote in ranked:
             symbol = str(quote.get("symbol") or "").upper()
             long_name = quote.get("longname") or quote.get("shortname") or ""
             if compact and compact == symbol.replace(" ", ""):
-                return str(quote["symbol"])
+                exact.append(quote)
+                continue
             if names_align(company_name, str(long_name)):
-                return str(quote["symbol"])
+                # Prefer primary US listings (AAPL) over foreign duals (APC.DE, AAPL34.SA).
+                aligned.append(quote)
+
+        for quote in self._prefer_us_listing(exact) + self._prefer_us_listing(aligned):
+            symbol = str(quote.get("symbol") or "")
+            if symbol:
+                return symbol
+
+        # Last resort for mega-caps when search is empty/rate-limited.
+        known = _KNOWN_TICKERS.get(normalize_name(company_name))
+        if known and self._chart_meta(known):
+            logger.info(
+                "Yahoo Finance: using known ticker fallback company=%r ticker=%s",
+                company_name,
+                known,
+            )
+            return known
         return None
+
+    @staticmethod
+    def _prefer_us_listing(quotes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        def rank(quote: dict[str, Any]) -> tuple[int, int, str]:
+            symbol = str(quote.get("symbol") or "")
+            exchange = str(quote.get("exchange") or quote.get("exchDisp") or "").upper()
+            us_ex = 0 if any(tag in exchange for tag in ("NMS", "NYQ", "NASDAQ", "NYSE", "NGM")) else 1
+            # Prefer plain AAPL over AAPL.DE / AAPL34.SA
+            simple = 0 if ("." not in symbol and not re.search(r"\d", symbol)) else 1
+            return (us_ex, simple, symbol)
+
+        return sorted(quotes, key=rank)
 
     def _search_quotes(self, company_name: str) -> list[dict[str, Any]]:
         try:

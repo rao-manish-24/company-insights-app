@@ -82,6 +82,21 @@ def test_clearbit_search_terms_include_probes() -> None:
     assert "pink taco" in terms
 
 
+def test_near_plural_matches_as_exact() -> None:
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    parts = service._query_parts("Advanced Micro Device")
+    assert service._classify_match(parts, "Advanced Micro Devices, Inc.", "AMD") == "exact"
+    score = service._score(
+        "Advanced Micro Device",
+        "Advanced Micro Devices, Inc.",
+        "Semiconductors · NMS",
+        source="yahoo",
+        ticker="AMD",
+    )
+    assert score >= 0.92
+    assert "Advanced Micro Devices" in service._near_query_variants("Advanced Micro Device")
+
+
 def test_wikipedia_exact_brand_scores_high() -> None:
     service = CompanyLookupService.__new__(CompanyLookupService)
     score = service._score(
