@@ -43,15 +43,32 @@ make logs-backend
 
 ---
 
+## Auth
+
+Generate insights and the library require an account. Guests who hit **Generate insights** are prompted to **Sign in** or **Create account** (email + password, JWT). Each user’s briefs stay private to their account.
+
+**Built-in admin** (ensured on every API start; override via env):
+
+| | |
+| --- | --- |
+| Username | `admin` |
+| Email | `admin@companyinsights.local` |
+| Password | `Admin123!` |
+
+Sign in with either the username or the email.
+
 ## Environment (minimum)
 
 | Variable | Purpose |
 | --- | --- |
+| `JWT_SECRET` | Signs auth tokens (set a long random value in deploy) |
 | `NEWS_API_KEY` | Live news (optional) |
 | `LLM_API_KEY` | Live insights (optional) |
 | `LLM_BASE_URL` / `LLM_MODEL` | e.g. xAI Grok |
 | `RESEND_API_KEY` | Email on Render (SMTP blocked on free tier) |
 | `EMAIL_TO` | Default inbox |
+
+See `.env.example` for a full template.
 
 ---
 
@@ -61,7 +78,7 @@ Render Blueprint is configured in `render.yaml`.
 
 1. Push to GitHub  
 2. Render → **New → Blueprint** → this repo  
-3. Set secrets on `companyinsights-api`  
+3. Set secrets on `companyinsights-api` (`JWT_SECRET`, `NEWS_API_KEY`, `LLM_API_KEY`, …)  
 4. Set `VITE_API_BASE_URL=https://<api-host>/api` on `companyinsights-web`  
 5. Set `CORS_ORIGINS` to the exact web origin  
 

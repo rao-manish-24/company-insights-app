@@ -6,9 +6,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.deps import get_analysis_service, get_current_user, get_email_service
-from app.core.exceptions import NotFoundError
-from app.core.rate_limit import analyze_rate_limiter
+from app.core.deps import (
+    get_analysis_service,
+    get_company_lookup_service,
+    get_current_user,
+    get_email_service,
+)
+from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.rate_limit import analyze_rate_limiter, suggest_cache, suggest_rate_limiter
 from app.models.schemas import (
     AnalyzeRequest,
     ClearHistoryResponse,
@@ -19,9 +24,13 @@ from app.models.schemas import (
     ExpandInsightRequest,
     ExpandInsightResponse,
     HealthResponse,
+    ResolveCompanyRequest,
+    ResolveCompanyResponse,
+    SuggestCompaniesResponse,
 )
 from app.models.user import User
 from app.services.analysis_service import AnalysisService
+from app.services.company_lookup_service import CompanyLookupService
 from app.services.email_service import EmailService
 
 logger = logging.getLogger(__name__)
@@ -45,6 +54,57 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
     return HealthResponse(status="ok", app=settings.app_name, environment=settings.environment)
 
 
+@router.get("/companies/suggest", response_model=SuggestCompaniesResponse)
+def suggest_companies(
+    request: Request,
+    q: str = Query(..., min_length=2, max_length=200),
+    lookup: CompanyLookupService = Depends(get_company_lookup_service),
+) -> SuggestCompaniesResponse:
+    """Lightweight autocomplete while typing (no auth; rate-limited + cached)."""
+    cleaned = " ".join(q.strip().split())
+    client = _client_ip(request)
+    suggest_rate_limiter.check(f"suggest-ip:{client}", limit=60, window_seconds=60)
+
+    cache_key = f"suggest:{cleaned.lower()}"
+    cached = suggest_cache.get(cache_key)
+    if isinstance(cached, list):
+        return SuggestCompaniesResponse(query=cleaned, suggestions=cached)
+
+    items = lookup.suggest(cleaned, limit=6)
+    payload = [
+        {
+            "name": item.name,
+            "description": item.description,
+            "confidence": item.confidence,
+            "source": item.source,
+            "ticker": item.ticker,
+            "location": item.location,
+        }
+        for item in items
+    ]
+    suggest_cache.set(cache_key, payload, ttl_seconds=120)
+    logger.info("Company suggest query=%r suggestions=%s ip=%s", cleaned, len(payload), client)
+    return SuggestCompaniesResponse.model_validate({"query": cleaned, "suggestions": payload})
+
+
+@router.post("/companies/resolve", response_model=ResolveCompanyResponse)
+def resolve_company(
+    payload: ResolveCompanyRequest,
+    user: User = Depends(get_current_user),
+    lookup: CompanyLookupService = Depends(get_company_lookup_service),
+) -> ResolveCompanyResponse:
+    resolution = lookup.resolve(payload.query)
+    logger.info(
+        "Company resolve query=%r status=%s confidence=%.3f suggestions=%s user_id=%s",
+        resolution.query,
+        resolution.status,
+        resolution.confidence,
+        len(resolution.suggestions),
+        user.id,
+    )
+    return ResolveCompanyResponse.model_validate(lookup.to_dict(resolution))
+
+
 @router.post("/analyze", response_model=CompanyAnalysisResponse)
 async def analyze_company(
     payload: AnalyzeRequest,
@@ -52,6 +112,7 @@ async def analyze_company(
     user: User = Depends(get_current_user),
     service: AnalysisService = Depends(get_analysis_service),
     email_service: EmailService = Depends(get_email_service),
+    lookup: CompanyLookupService = Depends(get_company_lookup_service),
 ) -> CompanyAnalysisResponse:
     settings = get_settings()
     client = _client_ip(request)
@@ -65,9 +126,25 @@ async def analyze_company(
         user.id,
     )
 
+    # Confidence gate: only high-confidence exact company names proceed to insights.
+    # Exception: user explicitly picked a suggestion card (confirmed=True).
+    if payload.confirmed:
+        company_name = payload.company_name
+        logger.info("Analyze confirmed suggestion company=%r user_id=%s", company_name, user.id)
+    else:
+        resolution = lookup.resolve(payload.company_name)
+        if resolution.status != "exact" or not resolution.matched_name:
+            if resolution.status == "ambiguous" and resolution.suggestions:
+                names = ", ".join(item.name for item in resolution.suggestions[:5])
+                raise BadRequestError(
+                    f"{resolution.message} Suggestions: {names}."
+                )
+            raise BadRequestError(resolution.message or "No valid companies found with this name.")
+        company_name = resolution.matched_name
+
     # Cache hits are free (no NewsAPI / LLM). Only throttle paths that hit upstream.
     if not payload.force_refresh:
-        cached = service.peek_cache(payload.company_name, user_id=user.id)
+        cached = service.peek_cache(company_name, user_id=user.id)
         if cached:
             logger.info("Analyze cache hit company=%r id=%s", cached.company_name, cached.id)
             return cached
@@ -79,9 +156,10 @@ async def analyze_company(
     )
 
     result = await service.analyze(
-        payload.company_name,
+        company_name,
         force_refresh=payload.force_refresh,
         user_id=user.id,
+        confirmed=payload.confirmed,
     )
     logger.info(
         "Analyze completed company=%r id=%s cached=%s model=%s",

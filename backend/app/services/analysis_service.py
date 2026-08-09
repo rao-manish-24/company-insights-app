@@ -17,6 +17,7 @@ from app.models.schemas import (
 )
 from app.repositories.analysis_repository import AnalysisRepository, normalize_company_name
 from app.services.company_profile_service import CompanyProfileService, empty_profile
+from app.services.company_validation import assert_valid_company
 from app.services.insights_agent import InsightsAgent
 from app.services.market_data_service import MarketDataService
 from app.services.news_service import NewsService
@@ -64,6 +65,12 @@ def _cached_response(row: CompanyAnalysis) -> CompanyAnalysisResponse:
     )
 
 
+def _assert_cached_still_valid(company_name: str, cached: CompanyAnalysisResponse) -> None:
+    profile = cached.company_profile if isinstance(cached.company_profile, dict) else {}
+    market = profile.get("market") if isinstance(profile.get("market"), dict) else None
+    assert_valid_company(company_name, profile=profile, market=market)
+
+
 class AnalysisService:
     def __init__(
         self,
@@ -100,6 +107,7 @@ class AnalysisService:
         force_refresh: bool = False,
         *,
         user_id: int,
+        confirmed: bool = False,
     ) -> CompanyAnalysisResponse:
         cleaned_name = " ".join(company_name.strip().split())
         if not cleaned_name:
@@ -110,14 +118,23 @@ class AnalysisService:
         if not force_refresh:
             cached = self.peek_cache(cleaned_name, user_id=user_id)
             if cached:
-                logger.info(
-                    "Cache hit company=%r analysis_id=%s user_id=%s age_window_hours=%s",
-                    cleaned_name,
-                    cached.id,
-                    user_id,
-                    self.settings.analysis_cache_hours,
-                )
-                return cached
+                try:
+                    _assert_cached_still_valid(cleaned_name, cached)
+                except Exception:
+                    logger.info(
+                        "Ignoring invalid cached brief company=%r analysis_id=%s",
+                        cleaned_name,
+                        cached.id,
+                    )
+                else:
+                    logger.info(
+                        "Cache hit company=%r analysis_id=%s user_id=%s age_window_hours=%s",
+                        cleaned_name,
+                        cached.id,
+                        user_id,
+                        self.settings.analysis_cache_hours,
+                    )
+                    return cached
             logger.info("Cache miss company=%r user_id=%s", cleaned_name, user_id)
         else:
             # Protect upstream quotas: at most one refresh per company per cooldown window
@@ -167,6 +184,7 @@ class AnalysisService:
                 cleaned_name,
                 force_refresh=force_refresh,
                 user_id=user_id,
+                confirmed=confirmed,
             )
 
         return await analyze_singleflight.do(f"analyze:{user_id}:{normalized}", _run)
@@ -177,6 +195,7 @@ class AnalysisService:
         *,
         force_refresh: bool = False,
         user_id: int,
+        confirmed: bool = False,
     ) -> CompanyAnalysisResponse:
         started = time.perf_counter()
         logger.info(
@@ -203,9 +222,7 @@ class AnalysisService:
                 )
                 return _cached_response(cached)
 
-        articles = await self.news_service.fetch_company_news(cleaned_name)
-        logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
-
+        # Resolve identity first — reject random words before NewsAPI/LLM spend.
         profile, market = await asyncio.gather(
             asyncio.to_thread(self.profile_service.fetch_profile, cleaned_name),
             asyncio.to_thread(self.market_service.fetch_market, cleaned_name),
@@ -213,6 +230,13 @@ class AnalysisService:
         if not profile:
             profile = empty_profile()
         profile = self.market_service.apply_to_profile(profile, market)
+        # Suggestion picks are already user-confirmed company names.
+        # Otherwise keep the wiki/market guard (now includes brands / brokerages).
+        if not confirmed:
+            assert_valid_company(cleaned_name, profile=profile, market=market)
+
+        articles = await self.news_service.fetch_company_news(cleaned_name)
+        logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
 
         insights = await asyncio.to_thread(
             self.insights_agent.analyze,

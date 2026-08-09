@@ -105,6 +105,7 @@ export interface CompanyProfile {
   key_people?: KeyPerson[]
   source?: string | null
   source_url?: string | null
+  wikipedia_url?: string | null
   matched_label?: string | null
   market?: MarketSnapshot | null
 }
@@ -155,4 +156,22 @@ export interface AuthResponse {
   access_token: string
   token_type: string
   user: UserPublic
+}
+
+export interface CompanySuggestion {
+  name: string
+  description?: string | null
+  confidence: number
+  source: string
+  ticker?: string | null
+  location?: string | null
+}
+
+export interface CompanyResolution {
+  query: string
+  status: 'exact' | 'ambiguous' | 'not_found' | string
+  confidence: number
+  matched_name?: string | null
+  message: string
+  suggestions: CompanySuggestion[]
 }

@@ -19,10 +19,22 @@ def _validate_optional_email(value: str | None) -> str | None:
 
 
 class AnalyzeRequest(BaseModel):
-    company_name: str = Field(..., min_length=1, max_length=200)
+    company_name: str = Field(..., min_length=2, max_length=200)
     force_refresh: bool = False
     send_email: bool = False
     email_to: str | None = None
+    # True when the user picked a resolve suggestion — trust that name, don't re-ambiguate.
+    confirmed: bool = False
+
+    @field_validator("company_name")
+    @classmethod
+    def validate_company_name(cls, value: str) -> str:
+        cleaned = " ".join(value.strip().split())
+        if len(cleaned) < 2:
+            raise ValueError("Not a valid company name. Enter at least 2 characters.")
+        if not re.search(r"[A-Za-z]", cleaned):
+            raise ValueError("Not a valid company name. Use letters in the company name.")
+        return cleaned
 
     @field_validator("email_to")
     @classmethod
@@ -138,6 +150,41 @@ class AuthResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserPublic
+
+
+class CompanySuggestionItem(BaseModel):
+    name: str
+    description: str | None = None
+    confidence: float
+    source: str
+    ticker: str | None = None
+    location: str | None = None
+
+
+class ResolveCompanyRequest(BaseModel):
+    query: str = Field(..., min_length=2, max_length=200)
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, value: str) -> str:
+        cleaned = " ".join(value.strip().split())
+        if len(cleaned) < 2:
+            raise ValueError("Enter at least 2 characters.")
+        return cleaned
+
+
+class ResolveCompanyResponse(BaseModel):
+    query: str
+    status: str  # exact | ambiguous | not_found
+    confidence: float
+    matched_name: str | None = None
+    message: str
+    suggestions: list[CompanySuggestionItem] = Field(default_factory=list)
+
+
+class SuggestCompaniesResponse(BaseModel):
+    query: str
+    suggestions: list[CompanySuggestionItem] = Field(default_factory=list)
 
 
 class HealthResponse(BaseModel):

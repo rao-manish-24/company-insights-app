@@ -12,6 +12,7 @@ from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.user_repository import UserRepository
 from app.services.analysis_service import AnalysisService
 from app.services.auth_service import AuthService
+from app.services.company_lookup_service import CompanyLookupService
 from app.services.email_service import EmailService
 from app.services.insights_agent import InsightsAgent
 from app.services.news_service import NewsService
@@ -29,6 +30,10 @@ def get_insights_agent() -> InsightsAgent:
 
 def get_email_service() -> EmailService:
     return EmailService()
+
+
+def get_company_lookup_service() -> CompanyLookupService:
+    return CompanyLookupService()
 
 
 def get_analysis_repository(db: Session = Depends(get_db)) -> AnalysisRepository:

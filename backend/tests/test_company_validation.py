@@ -1,0 +1,39 @@
+from app.core.exceptions import BadRequestError
+from app.services.company_validation import assert_valid_company, names_align
+
+
+def test_names_align_rejects_single_letter_substring() -> None:
+    assert names_align("k", "kelvin") is False
+    assert names_align("m", "metre") is False
+    assert names_align("Microsoft", "Microsoft Corporation") is True
+    assert names_align("MSFT", "MSFT") is True
+
+
+def test_assert_valid_company_rejects_junk() -> None:
+    try:
+        assert_valid_company(
+            "k",
+            profile={"matched_label": "kelvin", "matched_description": "SI unit of temperature"},
+            market={"ticker": "KRW=X", "name": "USD/KRW"},
+        )
+        raise AssertionError("expected BadRequestError")
+    except BadRequestError as exc:
+        assert "Not a valid company name" in exc.detail
+
+
+def test_businessperson_description_is_not_company() -> None:
+    from app.services.company_validation import description_looks_like_company
+
+    assert description_looks_like_company(
+        "Indian businessperson (born 1985, child of Gauthamchand Bhandari)"
+    ) is False
+    assert description_looks_like_company("American real estate brokerage") is True
+    assert description_looks_like_company("multinational technology company") is True
+
+
+def test_assert_valid_company_accepts_ticker() -> None:
+    assert_valid_company(
+        "MSFT",
+        profile={},
+        market={"ticker": "MSFT", "name": "Microsoft Corporation"},
+    )

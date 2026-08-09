@@ -426,12 +426,22 @@ export function InsightsPanel({ analysis, onRefresh, refreshing }: Props) {
             </ul>
           </div>
 
-          {profile?.source_url && (
+          {(profile?.source_url || profile?.wikipedia_url) && (
             <p className="profile-source">
               Company source:{' '}
-              <a href={profile.source_url} target="_blank" rel="noopener noreferrer">
-                {profile.source || 'Wikidata'}
-              </a>
+              {profile.source_url ? (
+                <a href={profile.source_url} target="_blank" rel="noopener noreferrer">
+                  {profile.source?.includes('Wikipedia') && profile.source_url.includes('wikidata')
+                    ? 'Wikidata'
+                    : profile.source || 'Wikidata'}
+                </a>
+              ) : null}
+              {profile.source_url && profile.wikipedia_url ? ' + ' : null}
+              {profile.wikipedia_url ? (
+                <a href={profile.wikipedia_url} target="_blank" rel="noopener noreferrer">
+                  Wikipedia
+                </a>
+              ) : null}
             </p>
           )}
         </section>

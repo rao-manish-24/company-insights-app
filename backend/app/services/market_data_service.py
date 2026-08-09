@@ -155,9 +155,11 @@ class MarketDataService:
         return profile
 
     def _resolve_ticker(self, company_name: str) -> str | None:
+        from app.services.company_validation import names_align
+
         compact = company_name.strip().upper().replace(" ", "")
         # Only treat short tokens as tickers (MSFT, BRK.B) — not full names.
-        if _TICKER_RE.match(compact) and len(compact) <= 6 and " " not in company_name.strip():
+        if _TICKER_RE.match(compact) and 1 < len(compact) <= 6 and " " not in company_name.strip():
             if self._chart_meta(compact):
                 return compact
 
@@ -171,17 +173,15 @@ class MarketDataService:
         if not ranked:
             ranked = [quote for quote in quotes if quote.get("symbol")]
 
-        if ranked:
-            name_l = company_name.lower()
-            for quote in ranked:
-                long_name = (quote.get("longname") or quote.get("shortname") or "").lower()
-                if name_l in long_name or long_name in name_l:
-                    return str(quote["symbol"])
-            return str(ranked[0]["symbol"])
-
-        guess = company_name.strip().upper().replace(" ", "-")
-        if self._chart_meta(guess):
-            return guess
+        # Require a real name/ticker alignment — never take ranked[0] blindly
+        # (that mapped "k"/"m" onto unrelated FX/unit-like hits).
+        for quote in ranked:
+            symbol = str(quote.get("symbol") or "").upper()
+            long_name = quote.get("longname") or quote.get("shortname") or ""
+            if compact and compact == symbol.replace(" ", ""):
+                return str(quote["symbol"])
+            if names_align(company_name, str(long_name)):
+                return str(quote["symbol"])
         return None
 
     def _search_quotes(self, company_name: str) -> list[dict[str, Any]]:

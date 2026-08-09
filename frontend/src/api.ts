@@ -4,6 +4,8 @@ import type {
   AnalysisListItem,
   AuthResponse,
   CompanyAnalysis,
+  CompanyResolution,
+  CompanySuggestion,
   ExpandInsightKind,
   ExpandInsightResult,
   UserPublic,
@@ -24,15 +26,19 @@ function parseDetail(body: unknown): string | null {
   const detail = (body as { detail?: unknown }).detail
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {
-    return detail
-      .map((item) => {
-        if (typeof item === 'string') return item
-        if (item && typeof item === 'object' && 'msg' in item) {
-          return String((item as { msg: unknown }).msg)
+    const messages = detail.map((item) => {
+      if (typeof item === 'string') return item
+      if (item && typeof item === 'object') {
+        const row = item as { msg?: unknown; type?: unknown; loc?: unknown }
+        const loc = Array.isArray(row.loc) ? row.loc.map(String) : []
+        if (loc.includes('company_name') || row.type === 'string_too_short') {
+          return 'Not a valid company name. Enter a real company (for example Microsoft or Nestlé).'
         }
-        return JSON.stringify(item)
-      })
-      .join('; ')
+        if (typeof row.msg === 'string') return row.msg
+      }
+      return JSON.stringify(item)
+    })
+    return messages.join('; ')
   }
   return null
 }
@@ -112,13 +118,35 @@ export function fetchMe(): Promise<UserPublic> {
   return request<UserPublic>('/auth/me', { auth: true })
 }
 
-export function analyzeCompany(companyName: string, forceRefresh = false): Promise<CompanyAnalysis> {
+export function resolveCompany(query: string): Promise<CompanyResolution> {
+  return request<CompanyResolution>('/companies/resolve', {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify({ query }),
+  })
+}
+
+export async function suggestCompanies(query: string): Promise<CompanySuggestion[]> {
+  const q = query.trim()
+  if (q.length < 2) return []
+  const result = await request<{ query: string; suggestions: CompanySuggestion[] }>(
+    `/companies/suggest?q=${encodeURIComponent(q)}`,
+  )
+  return result.suggestions || []
+}
+
+export function analyzeCompany(
+  companyName: string,
+  forceRefresh = false,
+  options?: { confirmed?: boolean },
+): Promise<CompanyAnalysis> {
   return request<CompanyAnalysis>('/analyze', {
     method: 'POST',
     auth: true,
     body: JSON.stringify({
       company_name: companyName,
       force_refresh: forceRefresh,
+      confirmed: Boolean(options?.confirmed),
     }),
   })
 }
