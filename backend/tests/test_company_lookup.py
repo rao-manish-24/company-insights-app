@@ -95,6 +95,8 @@ def test_near_plural_matches_as_exact() -> None:
     )
     assert score >= 0.92
     assert "Advanced Micro Devices" in service._near_query_variants("Advanced Micro Device")
+    fallbacks = service._known_company_fallbacks(parts)
+    assert fallbacks and fallbacks[0].ticker == "AMD"
 
 
 def test_wikipedia_exact_brand_scores_high() -> None:

@@ -82,7 +82,8 @@ def suggest_companies(
         }
         for item in items
     ]
-    suggest_cache.set(cache_key, payload, ttl_seconds=120)
+    # Don't pin empty misses for long — near-miss fixes / upstream recovery should retry soon.
+    suggest_cache.set(cache_key, payload, ttl_seconds=20 if not payload else 120)
     logger.info("Company suggest query=%r suggestions=%s ip=%s", cleaned, len(payload), client)
     return SuggestCompaniesResponse.model_validate({"query": cleaned, "suggestions": payload})
 

@@ -179,6 +179,10 @@ def description_looks_like_company(description: str | None) -> bool:
         "aerospace",
         "social media",
         "chatbot",
+        "semiconductor",
+        "semiconductors",
+        "chipmaker",
+        "processor",
     )
     if any(bit in desc for bit in preferred):
         return True

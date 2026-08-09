@@ -83,6 +83,21 @@ _CORP_SUFFIX_TOKENS = frozenset(
 )
 _SOURCE_RANK = {"wikidata": 0, "wikipedia": 1, "yahoo": 2, "clearbit": 3}
 
+# Canonical rescue when upstream search is thin (Render IP blocks / empty Clearbit).
+# Keys are stemmed token tuples from company_validation.stemmed_tokens().
+_KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str]] = {
+    ("advanced", "micro", "device"): ("Advanced Micro Devices, Inc.", "AMD"),
+    ("apple",): ("Apple Inc.", "AAPL"),
+    ("microsoft",): ("Microsoft Corporation", "MSFT"),
+    ("tesla",): ("Tesla, Inc.", "TSLA"),
+    ("nvidia",): ("NVIDIA Corporation", "NVDA"),
+    ("amazon",): ("Amazon.com, Inc.", "AMZN"),
+    ("alphabet",): ("Alphabet Inc.", "GOOGL"),
+    ("google",): ("Alphabet Inc.", "GOOGL"),
+    ("meta",): ("Meta Platforms, Inc.", "META"),
+    ("netflix",): ("Netflix, Inc.", "NFLX"),
+}
+
 
 @dataclass(frozen=True)
 class _QueryParts:
@@ -170,6 +185,10 @@ class CompanyLookupService:
                     "Autocomplete wikipedia fallback failed query=%r", cleaned, exc_info=True
                 )
 
+        strong = [item for item in out if item.confidence >= AUTOCOMPLETE_CONFIDENCE]
+        if len(strong) < 1:
+            out.extend(self._known_company_fallbacks(parts))
+
         # For short prefixes, one parallel probe burst fills Red Hat / Pink Lily gaps.
         strong = [item for item in out if item.confidence >= AUTOCOMPLETE_CONFIDENCE]
         if " " not in cleaned and 3 <= len(cleaned) <= 6 and len(strong) < 3:
@@ -238,6 +257,8 @@ class CompanyLookupService:
             )
 
         candidates = self._collect_candidates(parts)
+        if not any(item.confidence >= SUGGEST_CONFIDENCE for item in candidates):
+            candidates = candidates + self._known_company_fallbacks(parts)
         ranked = sorted(
             candidates,
             key=lambda item: (
@@ -357,6 +378,34 @@ class CompanyLookupService:
             seen.add(key)
             ordered.append(term)
         return ordered
+
+    def _known_company_fallbacks(self, parts: _QueryParts) -> list[CompanySuggestion]:
+        """Inject mega-cap matches when live search returns nothing useful."""
+        stem = stemmed_tokens(parts.norm)
+        hit = _KNOWN_STEM_COMPANIES.get(stem)
+        if not hit:
+            return []
+        name, ticker = hit
+        scored = self._score_parts(
+            parts,
+            name,
+            f"Public company · {ticker}",
+            source="yahoo",
+            ticker=ticker,
+        )
+        if scored["confidence"] < SUGGEST_CONFIDENCE:
+            return []
+        return [
+            CompanySuggestion(
+                name=name,
+                description=f"Public company · {ticker}",
+                confidence=max(scored["confidence"], 0.93),
+                source="yahoo",
+                ticker=ticker,
+                location="NMS",
+                match_kind=scored["match_kind"],
+            )
+        ]
 
     def _clearbit_search_terms(self, query: str) -> list[str]:
         terms = list(self._near_query_variants(query))
