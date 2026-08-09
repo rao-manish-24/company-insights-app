@@ -65,6 +65,8 @@ type CompanyInsightsContextValue = {
     options?: { skipResolve?: boolean; confirmed?: boolean },
   ) => Promise<RunAnalysisResult>
   cancelAnalysis: () => void
+  /** Hard-stop search + wipe workspace (used by End session / Sign out). */
+  endSession: () => void
   pickSuggestion: (suggestion: CompanySuggestion) => Promise<RunAnalysisResult>
   onSearchKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
   openRecent: (id: number) => Promise<RunAnalysisResult>
@@ -199,6 +201,23 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
     setActiveSuggestionIndex(-1)
     setAutocompleteLoading(false)
   }, [])
+
+  const endSession = useCallback(() => {
+    cancelAnalysis()
+    setAnalysis(null)
+    setRecent([])
+    setHistoryLoaded(false)
+    setHistoryLoading(false)
+    setRunMetrics(null)
+    setError(null)
+    setHistoryError(null)
+    setSuggestions([])
+    setSuggestionMessage(null)
+    setQueryState('')
+    setLoading(false)
+    setLoadingMode('analyze')
+    clearAutocomplete()
+  }, [cancelAnalysis, clearAutocomplete])
 
   const clearRunMetrics = useCallback(() => {
     setRunMetrics(null)
@@ -479,9 +498,12 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       void loadHistory()
       return
     }
+    // Abrupt sign-out / end-session: kill in-flight work and wipe the board.
+    cancelAnalysis()
     setAnalysis(null)
     setRecent([])
     setHistoryLoaded(false)
+    setHistoryLoading(false)
     setRunMetrics(null)
     setError(null)
     setHistoryError(null)
@@ -556,6 +578,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       runMetrics,
       runAnalysis,
       cancelAnalysis,
+      endSession,
       pickSuggestion,
       onSearchKeyDown,
       openRecent,
@@ -584,6 +607,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       runMetrics,
       runAnalysis,
       cancelAnalysis,
+      endSession,
       pickSuggestion,
       onSearchKeyDown,
       openRecent,

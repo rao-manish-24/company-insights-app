@@ -1,9 +1,19 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useCompanyInsights } from '../hooks/useCompanyInsights'
 import { AuthModal } from './AuthModal'
 
 export function AppShell() {
+  const navigate = useNavigate()
   const { user, ready, openAuth, signOut } = useAuth()
+  const { endSession } = useCompanyInsights()
+
+  function onEndSession() {
+    // Kill in-flight analyze/open immediately, wipe workspace, drop the token.
+    endSession()
+    signOut()
+    navigate('/', { replace: true })
+  }
 
   return (
     <div className="app app--routed">
@@ -38,7 +48,11 @@ export function AppShell() {
                 >
                   {user.is_guest ? 'Private' : user.display_name || user.email}
                 </span>
-                <button type="button" className="btn btn-ghost topbar-auth-btn" onClick={signOut}>
+                <button
+                  type="button"
+                  className="btn btn-ghost topbar-auth-btn"
+                  onClick={onEndSession}
+                >
                   {user.is_guest ? 'End session' : 'Sign out'}
                 </button>
               </div>

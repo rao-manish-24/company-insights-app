@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authMessage, setAuthMessage] = useState<string | null>(null)
   const [pendingCompany, setPendingCompany] = useState<string | null>(null)
   const guestBootRef = useRef<Promise<UserPublic> | null>(null)
+  const sessionGenRef = useRef(0)
   const userRef = useRef<UserPublic | null>(null)
   userRef.current = user
 
@@ -110,21 +111,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (current) return current
     if (guestBootRef.current) return guestBootRef.current
 
+    const gen = sessionGenRef.current
     const boot = (async () => {
       const existing = getAuthToken()
       if (existing) {
         try {
           const me = await fetchMe()
+          if (gen !== sessionGenRef.current) {
+            throw new Error('Session ended')
+          }
           setUser(me)
           setAuthOpen(false)
           setAuthMessage(null)
           return me
-        } catch {
+        } catch (err) {
+          if (gen !== sessionGenRef.current) throw err
           clearAuthToken()
         }
       }
 
       const result = await startGuestSession()
+      if (gen !== sessionGenRef.current) {
+        throw new Error('Session ended')
+      }
       setAuthToken(result.access_token)
       setUser(result.user)
       setAuthOpen(false)
@@ -141,9 +150,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(() => {
+    // Invalidate any in-flight private-session boot so it can't resurrect the user.
+    sessionGenRef.current += 1
+    guestBootRef.current = null
     clearAuthToken()
     setUser(null)
     setPendingCompany(null)
+    setAuthOpen(false)
+    setAuthMessage(null)
   }, [])
 
   const clearPendingCompany = useCallback(() => setPendingCompany(null), [])
