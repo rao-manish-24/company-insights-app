@@ -15,6 +15,7 @@ from app.core.rate_limit import lookup_cache
 from app.services.company_validation import (
     description_is_rejected,
     description_looks_like_company,
+    looks_like_gibberish,
     normalize_name,
     stemmed_tokens,
 )
@@ -176,7 +177,7 @@ class CompanyLookupService:
         if len(cleaned) < 2 or not re.search(r"[A-Za-z]", cleaned):
             return []
         parts = self._query_parts(cleaned)
-        if parts.norm in _PLACEHOLDER_QUERIES:
+        if parts.norm in _PLACEHOLDER_QUERIES or looks_like_gibberish(cleaned):
             return []
 
         out: list[CompanySuggestion] = []
@@ -262,7 +263,7 @@ class CompanyLookupService:
         Returns (matched_name, ticker) when known stems or Clearbit prove company-grade.
         """
         cleaned = " ".join((company_name or "").strip().split())
-        if len(cleaned) < 2:
+        if len(cleaned) < 2 or looks_like_gibberish(cleaned):
             return None
         cache_key = f"quick:{cleaned.lower()}"
         cached = lookup_cache.get(cache_key)
@@ -317,7 +318,7 @@ class CompanyLookupService:
                 suggestions=[],
             )
         parts = self._query_parts(cleaned)
-        if parts.norm in _PLACEHOLDER_QUERIES:
+        if parts.norm in _PLACEHOLDER_QUERIES or looks_like_gibberish(cleaned):
             return CompanyResolution(
                 query=cleaned,
                 status="not_found",

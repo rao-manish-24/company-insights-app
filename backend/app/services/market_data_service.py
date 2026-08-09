@@ -92,11 +92,14 @@ def empty_market() -> dict[str, Any]:
 class MarketDataService:
     def __init__(self) -> None:
         self._client = get_http_client()
+        # True when Yahoo throttled/blocked us (429/5xx) during the last fetch.
+        self.last_degraded = False
 
     def close(self) -> None:
         """No-op: HTTP client is shared process-wide."""
 
     def fetch_market(self, company_name: str, *, ticker: str | None = None) -> dict[str, Any]:
+        self.last_degraded = False
         market = empty_market()
         cleaned = " ".join(company_name.strip().split())
         if not cleaned:
@@ -343,11 +346,13 @@ class MarketDataService:
                     response.status_code,
                     company_name,
                 )
+                self.last_degraded = True
                 return []
             response.raise_for_status()
             return list(response.json().get("quotes") or [])
         except Exception:
             logger.warning("Yahoo search failed company=%r", company_name, exc_info=True)
+            self.last_degraded = True
             return []
 
     def _fetch_info_bundle(

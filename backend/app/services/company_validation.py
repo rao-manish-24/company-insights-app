@@ -78,6 +78,48 @@ def normalize_name(value: str) -> str:
     return " ".join(cleaned.split())
 
 
+_VOWELS = frozenset("aeiouy")
+_REPEATED_RUN_RE = re.compile(r"(.)\1{2,}")
+# Squatted domains (hhhhhh.co, asdfgh.es) make Clearbit return keyboard mash as
+# a "company", so reject the shape of the string before trusting any upstream.
+_KEYBOARD_ROWS = ("qwertyuiop", "asdfghjkl", "zxcvbnm", "qazwsxedcrfv")
+_KEYBOARD_RUNS = frozenset(
+    row[i : i + size]
+    for source in _KEYBOARD_ROWS
+    for row in (source, source[::-1])
+    for size in (4, 5)
+    for i in range(len(row) - size + 1)
+)
+
+
+def _token_is_gibberish(token: str) -> bool:
+    t = token.lower()
+    # Short tokens (3M, IBM, Q2) are legitimate and handled by other gates.
+    if len(t) < 4 or not t.isalpha():
+        return False
+    # "hhhhhh" — three or more of the same letter in a row.
+    if _REPEATED_RUN_RE.search(t):
+        return True
+    # "abab", "aabbaa" — almost no distinct letters.
+    if len(set(t)) <= max(2, len(t) // 4):
+        return True
+    # "asdfgh", "qwerty" — keyboard mashing.
+    if any(t[i : i + 4] in _KEYBOARD_RUNS for i in range(len(t) - 3)):
+        return True
+    # Long strings with no vowel at all ("HSBC"/"KPMG" are short, so safe).
+    if len(t) >= 6 and not (set(t) & _VOWELS):
+        return True
+    return False
+
+
+def looks_like_gibberish(value: str) -> bool:
+    """True when every meaningful token is keyboard mash rather than a name."""
+    tokens = [tok for tok in normalize_name(value).split() if len(tok) >= 4 and tok.isalpha()]
+    if not tokens:
+        return False
+    return all(_token_is_gibberish(tok) for tok in tokens)
+
+
 def stem_token(token: str) -> str:
     """Light plural stem so Device ≈ Devices (not a full NLP stemmer)."""
     t = (token or "").lower()
@@ -292,12 +334,59 @@ def market_supports_company(query: str, market: dict[str, Any] | None) -> bool:
     return names_align(query, str(market_name) if market_name else None)
 
 
+def company_evidence_ok(
+    company_name: str,
+    *,
+    profile: dict[str, Any] | None,
+    market: dict[str, Any] | None,
+) -> bool:
+    """True when Wikidata/Wikipedia or market data actually back this company."""
+    cleaned = " ".join((company_name or "").strip().split())
+    matched = (profile or {}).get("matched_label") if isinstance(profile, dict) else None
+    wiki_desc = (profile or {}).get("matched_description") if isinstance(profile, dict) else None
+    matched_text = str(matched) if matched else ""
+    desc_text = str(wiki_desc) if wiki_desc else ""
+
+    wiki_ok = False
+    if matched and names_align(cleaned, matched_text):
+        if not description_is_rejected(desc_text) and (
+            description_looks_like_company(desc_text) or profile_has_company_signal(profile)
+        ):
+            wiki_ok = True
+
+    return wiki_ok or market_supports_company(cleaned, market)
+
+
+def articles_mention_company(company_name: str, articles: Any) -> bool:
+    """True when at least one article actually talks about this company."""
+    norm = normalize_name(company_name)
+    if not norm:
+        return False
+    tokens = [tok for tok in norm.split() if len(tok) >= 3]
+    if not tokens:
+        return False
+    for article in articles or []:
+        title = getattr(article, "title", None) or ""
+        description = getattr(article, "description", None) or ""
+        haystack = normalize_name(f"{title} {description}")
+        if not haystack:
+            continue
+        if norm in haystack:
+            return True
+        # Multi-word brands: every significant token present is good enough.
+        if len(tokens) > 1 and all(tok in haystack for tok in tokens):
+            return True
+    return False
+
+
 def assert_valid_company(
     company_name: str,
     *,
     profile: dict[str, Any] | None,
     market: dict[str, Any] | None,
     identity_verified: bool = False,
+    upstream_degraded: bool = False,
+    articles: Any = None,
 ) -> None:
     cleaned = " ".join((company_name or "").strip().split())
     if len(cleaned) < 2:
@@ -306,29 +395,36 @@ def assert_valid_company(
     if not re.search(r"[A-Za-z]", cleaned):
         raise BadRequestError("Not a valid company name. Use letters in the company name.")
 
-    wiki_ok = False
+    # Squatted domains make keyboard mash look like a company to autocomplete.
+    if looks_like_gibberish(cleaned):
+        raise BadRequestError(
+            f"Not a valid company name: “{cleaned}”. "
+            "Enter a real company (for example Microsoft, Nestlé, or Siemens)."
+        )
+
     matched = (profile or {}).get("matched_label") if isinstance(profile, dict) else None
     wiki_desc = (profile or {}).get("matched_description") if isinstance(profile, dict) else None
     matched_text = str(matched) if matched else ""
     desc_text = str(wiki_desc) if wiki_desc else ""
 
-    if matched and names_align(cleaned, matched_text):
-        # Positive non-company evidence (given name / person) always rejects.
-        if description_is_rejected(desc_text):
-            raise BadRequestError(
-                f"Not a valid company name: “{cleaned}”. "
-                "Enter a real company (for example Microsoft, Nestlé, or Siemens)."
-            )
-        if description_looks_like_company(desc_text) or profile_has_company_signal(profile):
-            wiki_ok = True
+    # Positive non-company evidence (given name / person) always rejects.
+    if matched and names_align(cleaned, matched_text) and description_is_rejected(desc_text):
+        raise BadRequestError(
+            f"Not a valid company name: “{cleaned}”. "
+            "Enter a real company (for example Microsoft, Nestlé, or Siemens)."
+        )
 
-    market_ok = market_supports_company(cleaned, market)
-
-    if wiki_ok or market_ok:
+    if company_evidence_ok(cleaned, profile=profile, market=market):
         return
 
-    # Resolve already proved company-grade identity; profile/market may be rate-limited (429).
-    if identity_verified:
+    # No public record found. Only trust a prior resolve when the upstreams that
+    # would have proven it were actually throttled/blocked (429/403), never when
+    # they answered cleanly with "nothing exists".
+    if identity_verified and upstream_degraded:
+        return
+
+    # Last resort: real news coverage naming the company is acceptable evidence.
+    if identity_verified and articles and articles_mention_company(cleaned, articles):
         return
 
     raise BadRequestError(

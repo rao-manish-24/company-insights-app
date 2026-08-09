@@ -254,11 +254,19 @@ class AnalysisService:
             if not profile:
                 profile = empty_profile()
             profile = self.market_service.apply_to_profile(profile, market)
+            # Only forgive a missing public record when the upstreams that would
+            # have proven it were actually throttled — not when they said "nothing".
+            upstream_degraded = bool(
+                getattr(self.profile_service, "last_degraded", False)
+                or getattr(self.market_service, "last_degraded", False)
+            )
             assert_valid_company(
                 cleaned_name,
                 profile=profile,
                 market=market,
                 identity_verified=identity_verified,
+                upstream_degraded=upstream_degraded,
+                articles=articles,
             )
             logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
             insights = await asyncio.to_thread(

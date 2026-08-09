@@ -83,11 +83,14 @@ class CompanyProfileService:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         self._client = get_http_client()
+        # True when Wikidata/Wikipedia refused us (403/429/5xx) during the last fetch.
+        self.last_degraded = False
 
     def close(self) -> None:
         """No-op: the HTTP client is shared process-wide and closed at shutdown."""
 
     def fetch_profile(self, company_name: str) -> dict[str, Any]:
+        self.last_degraded = False
         cache_key = f"profile:{' '.join(company_name.strip().lower().split())}"
         cached = profile_cache.get(cache_key)
         if isinstance(cached, dict):
@@ -218,6 +221,12 @@ class CompanyProfileService:
             profile_cache.set(cache_key, copy.deepcopy(profile), ttl, stale_seconds=ttl * 3)
         return profile
 
+    def _get_json_tracked(self, url: str, *, params: dict[str, Any]) -> dict[str, Any] | None:
+        payload = self._get_json(url, params=params)
+        if payload is None:
+            self.last_degraded = True
+        return payload
+
     def _get_json(self, url: str, *, params: dict[str, Any]) -> dict[str, Any] | None:
         """GET JSON; refusals/outages return None so callers can fall back."""
         return get_json(url, params=params, client=self._client, label="company profile")
@@ -264,7 +273,7 @@ class CompanyProfileService:
                 return title
 
         # Fallback: Wikipedia search, prefer company/org-ish titles.
-        payload = self._get_json(
+        payload = self._get_json_tracked(
             WIKIPEDIA_API,
             params={
                 "action": "query",
@@ -288,7 +297,7 @@ class CompanyProfileService:
         return (hits[0].get("title") or "").strip() or None
 
     def _fetch_wikipedia_wikitext(self, title: str) -> str | None:
-        payload = self._get_json(
+        payload = self._get_json_tracked(
             WIKIPEDIA_API,
             params={
                 "action": "query",
@@ -474,7 +483,7 @@ class CompanyProfileService:
             names_align,
         )
 
-        payload = self._get_json(
+        payload = self._get_json_tracked(
             WIKIDATA_API,
             params={
                 "action": "wbsearchentities",
@@ -509,7 +518,7 @@ class CompanyProfileService:
         return None
 
     def _get_entity(self, qid: str) -> dict[str, Any] | None:
-        payload = self._get_json(
+        payload = self._get_json_tracked(
             WIKIDATA_API,
             params={
                 "action": "wbgetentities",
