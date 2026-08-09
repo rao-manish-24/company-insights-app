@@ -278,7 +278,7 @@ class AnalysisService:
             return profile, market, articles, insights
 
         # Share News/LLM/profile work across users for the same company.
-        if identity_verified and not force_refresh:
+        if not force_refresh:
             profile, market, articles, insights = await upstream_singleflight.do(
                 f"upstream:{normalized}",
                 _fetch_upstream,

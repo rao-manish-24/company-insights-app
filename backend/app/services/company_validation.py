@@ -334,6 +334,18 @@ def market_supports_company(query: str, market: dict[str, Any] | None) -> bool:
     return names_align(query, str(market_name) if market_name else None)
 
 
+def is_curated_company(company_name: str) -> bool:
+    """Names on the hand-maintained rescue list are real by construction.
+
+    Wikidata resolves some firms to their founder's person entry (Roland Berger,
+    Kearney), so the curated list has to outrank a missing company record.
+    """
+    # Imported lazily: the lookup service imports this module at load time.
+    from app.services.company_lookup_service import KNOWN_COMPANY_STEMS
+
+    return stemmed_tokens(company_name) in KNOWN_COMPANY_STEMS
+
+
 def company_evidence_ok(
     company_name: str,
     *,
@@ -342,6 +354,8 @@ def company_evidence_ok(
 ) -> bool:
     """True when Wikidata/Wikipedia or market data actually back this company."""
     cleaned = " ".join((company_name or "").strip().split())
+    if is_curated_company(cleaned):
+        return True
     matched = (profile or {}).get("matched_label") if isinstance(profile, dict) else None
     wiki_desc = (profile or {}).get("matched_description") if isinstance(profile, dict) else None
     matched_text = str(matched) if matched else ""
@@ -358,23 +372,17 @@ def company_evidence_ok(
 
 
 def articles_mention_company(company_name: str, articles: Any) -> bool:
-    """True when at least one article actually talks about this company."""
-    norm = normalize_name(company_name)
-    if not norm:
-        return False
-    tokens = [tok for tok in norm.split() if len(tok) >= 3]
+    """True when at least one article actually names this company."""
+    tokens = [tok for tok in normalize_name(company_name).split() if tok]
     if not tokens:
         return False
+    width = len(tokens)
     for article in articles or []:
         title = getattr(article, "title", None) or ""
         description = getattr(article, "description", None) or ""
-        haystack = normalize_name(f"{title} {description}")
-        if not haystack:
-            continue
-        if norm in haystack:
-            return True
-        # Multi-word brands: every significant token present is good enough.
-        if len(tokens) > 1 and all(tok in haystack for tok in tokens):
+        words = normalize_name(f"{title} {description}").split()
+        # Whole-word run so "lily" does not match "family".
+        if any(words[i : i + width] == tokens for i in range(len(words) - width + 1)):
             return True
     return False
 
@@ -402,6 +410,10 @@ def assert_valid_company(
             "Enter a real company (for example Microsoft, Nestlé, or Siemens)."
         )
 
+    # Curated list outranks Wikidata, which maps some firms to their founder.
+    if is_curated_company(cleaned):
+        return
+
     matched = (profile or {}).get("matched_label") if isinstance(profile, dict) else None
     wiki_desc = (profile or {}).get("matched_description") if isinstance(profile, dict) else None
     matched_text = str(matched) if matched else ""
@@ -417,14 +429,15 @@ def assert_valid_company(
     if company_evidence_ok(cleaned, profile=profile, market=market):
         return
 
-    # No public record found. Only trust a prior resolve when the upstreams that
-    # would have proven it were actually throttled/blocked (429/403), never when
-    # they answered cleanly with "nothing exists".
-    if identity_verified and upstream_degraded:
+    # No registry record, so fall back to real news coverage naming the company.
+    # This is what keeps genuine private firms working without a Wikidata entry.
+    if articles_mention_company(cleaned, articles):
         return
 
-    # Last resort: real news coverage naming the company is acceptable evidence.
-    if identity_verified and articles and articles_mention_company(cleaned, articles):
+    # Nothing at all. Only a registry-grade identity gets the benefit of the
+    # doubt, and only when the upstreams that would have proven it were actually
+    # throttled (403/429) rather than answering cleanly with "nothing exists".
+    if identity_verified and upstream_degraded:
         return
 
     raise BadRequestError(

@@ -131,6 +131,7 @@ async def analyze_company(
     # second Wiki/Yahoo/Clearbit burst on every Generate.
     company_name = payload.company_name
     ticker_hint = (payload.ticker or "").strip().upper() or None
+    identity_verified = False
     if payload.resolved or payload.confirmed:
         logger.info(
             "Analyze fast-path resolved=%s confirmed=%s company=%r user_id=%s",
@@ -141,7 +142,7 @@ async def analyze_company(
         )
         quick = lookup.quick_verify(company_name)
         if quick:
-            company_name, quick_ticker = quick
+            company_name, quick_ticker, identity_verified = quick
             ticker_hint = ticker_hint or quick_ticker
         else:
             resolution = lookup.resolve(company_name)
@@ -166,6 +167,7 @@ async def analyze_company(
                         )
                     company_name = picked.name
                     ticker_hint = ticker_hint or picked.ticker
+                    identity_verified = lookup.is_strong_identity(picked)
                 else:
                     if resolution.status == "ambiguous" and resolution.suggestions:
                         names = ", ".join(item.name for item in resolution.suggestions[:5])
@@ -177,6 +179,7 @@ async def analyze_company(
                     )
             else:
                 company_name = resolution.matched_name
+                identity_verified = resolution.verified
                 if resolution.suggestions:
                     ticker_hint = ticker_hint or resolution.suggestions[0].ticker
     else:
@@ -189,6 +192,7 @@ async def analyze_company(
                 )
             raise BadRequestError(resolution.message or "No valid companies found with this name.")
         company_name = resolution.matched_name
+        identity_verified = resolution.verified
         if resolution.suggestions:
             ticker_hint = ticker_hint or resolution.suggestions[0].ticker
 
@@ -217,7 +221,7 @@ async def analyze_company(
         force_refresh=payload.force_refresh,
         user_id=user.id,
         confirmed=payload.confirmed,
-        identity_verified=True,
+        identity_verified=identity_verified,
         ticker=ticker_hint,
     )
     logger.info(

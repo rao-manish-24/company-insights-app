@@ -145,6 +145,27 @@ def test_quick_verify_accepts_known_bain() -> None:
     result = service.quick_verify("Bain & Company")
     assert result is not None
     assert result[0] == "Bain & Company"
+    # Curated known company is registry-grade, not a bare Clearbit domain.
+    assert result[2] is True
+
+
+def test_quick_verify_marks_clearbit_only_match_unverified() -> None:
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    service._clearbit_candidates = lambda parts: [  # type: ignore[method-assign]
+        CompanySuggestion(
+            name="LOLzera",
+            description="Company · lolzera.com.br",
+            confidence=0.99,
+            source="clearbit",
+            location="lolzera.com.br",
+            match_kind="exact",
+        )
+    ]
+    result = service.quick_verify("LOLzera")
+    assert result is not None
+    assert result[0] == "LOLzera"
+    # A parked domain must not buy the rate-limit benefit of the doubt.
+    assert result[2] is False
 
 
 def test_bain_and_company_auto_analyzes_full_name() -> None:

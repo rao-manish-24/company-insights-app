@@ -85,6 +85,9 @@ _CORP_SUFFIX_TOKENS = frozenset(
     }
 )
 _SOURCE_RANK = {"wikidata": 0, "wikipedia": 1, "yahoo": 2, "clearbit": 3}
+# Sources that mean "this entity exists in a registry", as opposed to Clearbit,
+# which will happily return any parked domain (lolzera.com.br, hhhhhh.co).
+_STRONG_SOURCES = frozenset({"wikidata", "wikipedia", "yahoo"})
 
 # Canonical rescue when upstream search is thin (Render IP blocks / empty Clearbit).
 # Keys are stemmed token tuples from company_validation.stemmed_tokens().
@@ -126,9 +129,21 @@ _KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str] | tuple[str, str, s
     ("siemen",): ("Siemens AG", "SIEGY"),
     ("nestle",): ("Nestlé S.A.", "NSRGY"),
     ("bain",): ("Bain & Company", "", "Management consulting firm"),
+    # Professional-services firms: private, and Wikidata often resolves the
+    # founder's person entry instead of the firm (Roland Berger, A.T. Kearney).
+    ("pwc",): ("PwC", "", "Professional services firm"),
+    ("pricewaterhousecooper",): ("PwC", "", "Professional services firm"),
+    ("kpmg",): ("KPMG", "", "Professional services firm"),
+    ("ernst", "young"): ("Ernst & Young", "", "Professional services firm"),
+    ("roland", "berger"): ("Roland Berger", "", "Management consulting firm"),
+    ("oliver", "wyman"): ("Oliver Wyman", "", "Management consulting firm"),
+    ("kearney",): ("Kearney", "", "Management consulting firm"),
     ("spacex",): ("SpaceX", "", "Aerospace manufacturer and spaceflight company"),
     ("openai",): ("OpenAI", "", "Artificial intelligence research company"),
 }
+
+# Hand-maintained, so membership is itself proof the company is real.
+KNOWN_COMPANY_STEMS: frozenset[tuple[str, ...]] = frozenset(_KNOWN_STEM_COMPANIES)
 
 
 @dataclass(frozen=True)
@@ -159,6 +174,9 @@ class CompanyResolution:
     matched_name: str | None
     message: str
     suggestions: list[CompanySuggestion]
+    # True only when a registry-grade source backed the match. Clearbit indexes
+    # domains, so a hit there proves a website exists — not a real company.
+    verified: bool = False
 
 
 class CompanyLookupService:
@@ -257,10 +275,15 @@ class CompanyLookupService:
                 break
         return suggestions
 
-    def quick_verify(self, company_name: str) -> tuple[str, str | None] | None:
+    def is_strong_identity(self, suggestion: CompanySuggestion) -> bool:
+        """True when a registry (Wikidata/Wikipedia/Yahoo), not just a domain, backs it."""
+        return suggestion.source in _STRONG_SOURCES or bool(suggestion.ticker)
+
+    def quick_verify(self, company_name: str) -> tuple[str, str | None, bool] | None:
         """Cheap identity check for analyze after client resolve — no Wiki/Yahoo burst.
 
-        Returns (matched_name, ticker) when known stems or Clearbit prove company-grade.
+        Returns (matched_name, ticker, verified) when the match is company-grade.
+        `verified` is False for Clearbit-only (domain) evidence.
         """
         cleaned = " ".join((company_name or "").strip().split())
         if len(cleaned) < 2 or looks_like_gibberish(cleaned):
@@ -268,7 +291,7 @@ class CompanyLookupService:
         cache_key = f"quick:{cleaned.lower()}"
         cached = lookup_cache.get(cache_key)
         if isinstance(cached, dict) and cached.get("name"):
-            return str(cached["name"]), cached.get("ticker")
+            return str(cached["name"]), cached.get("ticker"), bool(cached.get("verified"))
 
         parts = self._query_parts(cleaned)
         candidates = self._known_company_fallbacks(parts)
@@ -298,13 +321,14 @@ class CompanyLookupService:
         )
         if not accepted:
             return None
+        verified = self.is_strong_identity(chosen)
         lookup_cache.set(
             cache_key,
-            {"name": chosen.name, "ticker": chosen.ticker},
+            {"name": chosen.name, "ticker": chosen.ticker, "verified": verified},
             ttl_seconds=600,
             stale_seconds=1800,
         )
-        return chosen.name, chosen.ticker
+        return chosen.name, chosen.ticker, verified
 
     def resolve(self, query: str, *, limit: int = 8) -> CompanyResolution:
         cleaned = " ".join((query or "").strip().split())
@@ -405,6 +429,7 @@ class CompanyLookupService:
                 matched_name=chosen.name,
                 message=f"Matched “{chosen.name}” (confidence {chosen.confidence:.0%}).",
                 suggestions=company_grade[:limit],
+                verified=self.is_strong_identity(chosen),
             )
 
         suggestable = [
@@ -467,6 +492,7 @@ class CompanyLookupService:
                 matched_name=payload.get("matched_name"),
                 message=str(payload.get("message") or ""),
                 suggestions=suggestions,
+                verified=bool(payload.get("verified")),
             )
         except Exception:
             logger.warning("Corrupt resolve cache payload", exc_info=True)
@@ -1330,6 +1356,7 @@ class CompanyLookupService:
             "confidence": round(resolution.confidence, 3),
             "matched_name": resolution.matched_name,
             "message": resolution.message,
+            "verified": resolution.verified,
             "suggestions": [
                 {
                     "name": item.name,

@@ -1,5 +1,6 @@
 from app.core.exceptions import BadRequestError
 from app.services.company_validation import (
+    articles_mention_company,
     assert_valid_company,
     looks_like_gibberish,
     names_align,
@@ -69,19 +70,45 @@ def test_assert_valid_company_rejects_gibberish_even_when_verified() -> None:
             assert "Not a valid company name" in exc.detail
 
 
-def test_assert_valid_company_accepts_news_backed_private_company() -> None:
-    class _Article:
-        def __init__(self, title: str, description: str) -> None:
-            self.title = title
-            self.description = description
+class _Article:
+    def __init__(self, title: str, description: str = "") -> None:
+        self.title = title
+        self.description = description
 
+
+def test_assert_valid_company_accepts_news_backed_private_company() -> None:
     assert_valid_company(
         "Zentara Dynamics",
         profile={},
         market={},
-        identity_verified=True,
+        identity_verified=False,
         articles=[_Article("Zentara Dynamics raises Series B", "The robotics firm ...")],
     )
+
+
+def test_assert_valid_company_rejects_unverified_identity_even_when_degraded() -> None:
+    # Clearbit-only (parked domain) match plus a Wikidata 429 must not pass.
+    try:
+        assert_valid_company(
+            "LOLzera",
+            profile={},
+            market={},
+            identity_verified=False,
+            upstream_degraded=True,
+            articles=[],
+        )
+        raise AssertionError("expected BadRequestError")
+    except BadRequestError as exc:
+        assert "Not a valid company name" in exc.detail
+
+
+def test_articles_mention_company_requires_whole_words() -> None:
+    assert articles_mention_company("Lily", [_Article("A family reunion")]) is False
+    assert articles_mention_company("Lily", [_Article("Lily posts record quarter")]) is True
+    assert (
+        articles_mention_company("Goldman Sachs", [_Article("Goldman Sachs hires CFO")]) is True
+    )
+    assert articles_mention_company("Goldman Sachs", [_Article("Goldman said Sachs left")]) is False
 
 
 def test_looks_like_gibberish_keeps_real_companies() -> None:
