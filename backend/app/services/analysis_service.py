@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import logging
 import time
 
@@ -6,7 +7,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import NotFoundError
-from app.core.rate_limit import RateLimitError, analyze_singleflight, refresh_rate_limiter
+from app.core.rate_limit import (
+    RateLimitError,
+    analyze_singleflight,
+    refresh_rate_limiter,
+    upstream_singleflight,
+)
 from app.models.company import CompanyAnalysis
 from app.models.schemas import (
     CompanyAnalysisResponse,
@@ -109,6 +115,7 @@ class AnalysisService:
         user_id: int,
         confirmed: bool = False,
         identity_verified: bool = False,
+        ticker: str | None = None,
     ) -> CompanyAnalysisResponse:
         cleaned_name = " ".join(company_name.strip().split())
         if not cleaned_name:
@@ -187,6 +194,7 @@ class AnalysisService:
                 user_id=user_id,
                 confirmed=confirmed,
                 identity_verified=identity_verified,
+                ticker=ticker,
             )
 
         return await analyze_singleflight.do(f"analyze:{user_id}:{normalized}", _run)
@@ -199,13 +207,15 @@ class AnalysisService:
         user_id: int,
         confirmed: bool = False,
         identity_verified: bool = False,
+        ticker: str | None = None,
     ) -> CompanyAnalysisResponse:
         started = time.perf_counter()
         logger.info(
-            "Pipeline start company=%r force_refresh=%s user_id=%s",
+            "Pipeline start company=%r force_refresh=%s user_id=%s ticker=%s",
             cleaned_name,
             force_refresh,
             user_id,
+            ticker,
         )
 
         # Only reuse a brief written by a concurrent singleflight twin.
@@ -225,33 +235,48 @@ class AnalysisService:
                 )
                 return _cached_response(cached)
 
-        # Resolve identity first — reject random words before NewsAPI/LLM spend.
-        profile, market = await asyncio.gather(
-            asyncio.to_thread(self.profile_service.fetch_profile, cleaned_name),
-            asyncio.to_thread(self.market_service.fetch_market, cleaned_name),
-        )
-        if not profile:
-            profile = empty_profile()
-        profile = self.market_service.apply_to_profile(profile, market)
-        # Validate company-ness. When resolve already proved company-grade identity,
-        # allow through if Wikidata/Yahoo are rate-limited — but still reject
-        # explicit non-company profile hits (e.g. given-name pages).
-        assert_valid_company(
-            cleaned_name,
-            profile=profile,
-            market=market,
-            identity_verified=identity_verified,
-        )
+        normalized = normalize_company_name(cleaned_name)
 
-        articles = await self.news_service.fetch_company_news(cleaned_name)
-        logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
+        async def _fetch_upstream() -> tuple[dict, dict, list, dict]:
+            profile, market = await asyncio.gather(
+                asyncio.to_thread(self.profile_service.fetch_profile, cleaned_name),
+                asyncio.to_thread(
+                    self.market_service.fetch_market,
+                    cleaned_name,
+                    ticker=ticker,
+                ),
+            )
+            if not profile:
+                profile = empty_profile()
+            profile = self.market_service.apply_to_profile(profile, market)
+            assert_valid_company(
+                cleaned_name,
+                profile=profile,
+                market=market,
+                identity_verified=identity_verified,
+            )
+            articles = await self.news_service.fetch_company_news(cleaned_name)
+            logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
+            insights = await asyncio.to_thread(
+                self.insights_agent.analyze,
+                cleaned_name,
+                articles,
+                profile,
+            )
+            return profile, market, articles, insights
 
-        insights = await asyncio.to_thread(
-            self.insights_agent.analyze,
-            cleaned_name,
-            articles,
-            profile,
-        )
+        # Share News/LLM/profile work across users for the same company.
+        if identity_verified and not force_refresh:
+            profile, market, articles, insights = await upstream_singleflight.do(
+                f"upstream:{normalized}",
+                _fetch_upstream,
+            )
+        else:
+            profile, market, articles, insights = await _fetch_upstream()
+
+        # Copy before mutating — singleflight returns a shared object.
+        profile = copy.deepcopy(profile)
+        insights = copy.deepcopy(insights)
         used_fallback = bool(insights.pop("_fallback", False))
         usage_raw = insights.pop("_usage", None)
         usage = usage_raw if isinstance(usage_raw, dict) else {}

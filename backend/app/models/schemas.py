@@ -23,8 +23,12 @@ class AnalyzeRequest(BaseModel):
     force_refresh: bool = False
     send_email: bool = False
     email_to: str | None = None
-    # True when the user picked a resolve suggestion — trust that name, don't re-ambiguate.
+    # True when the user picked a resolve/autocomplete suggestion.
     confirmed: bool = False
+    # True when the client already got status=exact from /companies/resolve.
+    resolved: bool = False
+    # Optional ticker hint from resolve/suggest so analyze can skip Yahoo search.
+    ticker: str | None = Field(default=None, max_length=16)
 
     @field_validator("company_name")
     @classmethod

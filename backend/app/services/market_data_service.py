@@ -8,17 +8,16 @@ import re
 import time
 from typing import Any
 
-import httpx
 import yfinance as yf
 
 from app.core.config import get_settings
+from app.core.http import get_http_client
 from app.core.rate_limit import market_cache
 
 logger = logging.getLogger(__name__)
 
 YAHOO_SEARCH = "https://query2.finance.yahoo.com/v1/finance/search"
 YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-USER_AGENT = "CompanyInsights/1.1 (partner briefing prototype; educational use)"
 
 _TICKER_RE = re.compile(r"^[A-Z][A-Z0-9.\-]{0,11}$")
 
@@ -50,6 +49,17 @@ _KNOWN_TICKERS: dict[str, str] = {
     "siemens ag": "SIEGY",
     "nestle": "NSRGY",
     "nestlé": "NSRGY",
+    "uber": "UBER",
+    "airbnb": "ABNB",
+    "spotify": "SPOT",
+    "paypal": "PYPL",
+    "visa": "V",
+    "mastercard": "MA",
+    "jpmorgan": "JPM",
+    "jp morgan": "JPM",
+    "goldman sachs": "GS",
+    "morgan stanley": "MS",
+    "accenture": "ACN",
 }
 
 
@@ -81,16 +91,12 @@ def empty_market() -> dict[str, Any]:
 
 class MarketDataService:
     def __init__(self) -> None:
-        self._client = httpx.Client(
-            timeout=20.0,
-            headers={"User-Agent": USER_AGENT},
-            follow_redirects=True,
-        )
+        self._client = get_http_client()
 
     def close(self) -> None:
-        self._client.close()
+        """No-op: HTTP client is shared process-wide."""
 
-    def fetch_market(self, company_name: str) -> dict[str, Any]:
+    def fetch_market(self, company_name: str, *, ticker: str | None = None) -> dict[str, Any]:
         market = empty_market()
         cleaned = " ".join(company_name.strip().split())
         if not cleaned:
@@ -103,7 +109,9 @@ class MarketDataService:
             return copy.deepcopy(cached)
 
         try:
-            ticker = self._resolve_ticker(cleaned)
+            hint = (ticker or "").strip().upper() or None
+            resolved = hint if hint and self._chart_meta(hint) else None
+            ticker = resolved or self._resolve_ticker(cleaned)
             if not ticker:
                 logger.info("Yahoo Finance: no ticker for company=%r", cleaned)
                 stale = market_cache.get(cache_key, allow_stale=True)

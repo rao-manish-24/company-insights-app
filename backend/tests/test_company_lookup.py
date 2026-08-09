@@ -110,6 +110,15 @@ def test_bain_known_fallback_private_firm() -> None:
         assert fallbacks[0].source == "wikipedia"
 
 
+def test_quick_verify_accepts_known_bain() -> None:
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    # Avoid network — only known stems.
+    service._clearbit_candidates = lambda parts: []  # type: ignore[method-assign]
+    result = service.quick_verify("Bain & Company")
+    assert result is not None
+    assert result[0] == "Bain & Company"
+
+
 def test_bain_and_company_auto_analyzes_full_name() -> None:
     """normalize() strips 'company', but a full typed name should still auto-run."""
     service = CompanyLookupService.__new__(CompanyLookupService)

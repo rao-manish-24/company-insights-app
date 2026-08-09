@@ -50,8 +50,10 @@ class Settings(BaseSettings):
     news_cache_minutes: int = 60
     # Wikidata / Wikipedia / Yahoo — reuse across resolve + analyze
     upstream_cache_minutes: int = 120
+    # Wikimedia's robot policy 403s any User-Agent without a contact URL/email.
+    upstream_contact: str = "https://github.com/rao-manish-24/company-insights-app"
     # API self-throttling (process-local)
-    analyze_rate_limit: int = 20
+    analyze_rate_limit: int = 40
     analyze_rate_window_seconds: int = 3600
     refresh_cooldown_minutes: int = 5
     llm_max_retries: int = 5
@@ -79,7 +81,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7
     # Private/guest sessions are shorter-lived than registered accounts.
     guest_jwt_expire_minutes: int = 60 * 24
-    guest_analyze_rate_limit: int = 8
+    guest_analyze_rate_limit: int = 15
     guest_retention_hours: int = 48
 
     # Persistent admin account ensured on every API startup.

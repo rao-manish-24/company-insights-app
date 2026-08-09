@@ -10,6 +10,8 @@ from typing import Any, Literal
 
 import httpx
 
+from app.core.http import get_fast_http_client, get_http_client, get_json
+from app.core.rate_limit import lookup_cache
 from app.services.company_validation import (
     description_is_rejected,
     description_looks_like_company,
@@ -23,7 +25,6 @@ logger = logging.getLogger(__name__)
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 CLEARBIT_SUGGEST_API = "https://autocomplete.clearbit.com/v1/companies/suggest"
-USER_AGENT = "CompanyInsights/1.1 (partner briefing prototype; educational use)"
 
 ResolveStatus = Literal["exact", "ambiguous", "not_found"]
 MatchKind = Literal[
@@ -86,8 +87,8 @@ _SOURCE_RANK = {"wikidata": 0, "wikipedia": 1, "yahoo": 2, "clearbit": 3}
 
 # Canonical rescue when upstream search is thin (Render IP blocks / empty Clearbit).
 # Keys are stemmed token tuples from company_validation.stemmed_tokens().
-# Values: (canonical name, ticker or "" for private firms).
-_KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str]] = {
+# Values: (canonical name, ticker or "", optional blurb for private firms).
+_KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str] | tuple[str, str, str]] = {
     ("advanced", "micro", "device"): ("Advanced Micro Devices, Inc.", "AMD"),
     ("apple",): ("Apple Inc.", "AAPL"),
     ("microsoft",): ("Microsoft Corporation", "MSFT"),
@@ -97,11 +98,35 @@ _KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str]] = {
     ("alphabet",): ("Alphabet Inc.", "GOOGL"),
     ("google",): ("Alphabet Inc.", "GOOGL"),
     ("meta",): ("Meta Platforms, Inc.", "META"),
+    ("facebook",): ("Meta Platforms, Inc.", "META"),
     ("netflix",): ("Netflix, Inc.", "NFLX"),
+    ("intel",): ("Intel Corporation", "INTC"),
+    ("ibm",): ("International Business Machines Corporation", "IBM"),
+    ("oracle",): ("Oracle Corporation", "ORCL"),
+    ("salesforce",): ("Salesforce, Inc.", "CRM"),
+    ("adobe",): ("Adobe Inc.", "ADBE"),
+    ("uber",): ("Uber Technologies, Inc.", "UBER"),
+    ("airbnb",): ("Airbnb, Inc.", "ABNB"),
+    ("spotify",): ("Spotify Technology S.A.", "SPOT"),
+    ("paypal",): ("PayPal Holdings, Inc.", "PYPL"),
+    ("visa",): ("Visa Inc.", "V"),
+    ("mastercard",): ("Mastercard Incorporated", "MA"),
+    ("jpmorgan",): ("JPMorgan Chase & Co.", "JPM"),
+    ("jp", "morgan"): ("JPMorgan Chase & Co.", "JPM"),
+    ("goldman",): ("The Goldman Sachs Group, Inc.", "GS"),
+    ("goldman", "sach"): ("The Goldman Sachs Group, Inc.", "GS"),
+    ("morgan", "stanley"): ("Morgan Stanley", "MS"),
+    ("accenture",): ("Accenture plc", "ACN"),
+    ("deloitte",): ("Deloitte", "", "Professional services firm"),
+    ("mckinsey",): ("McKinsey & Company", "", "Management consulting firm"),
+    ("bcg",): ("Boston Consulting Group", "", "Management consulting firm"),
+    ("boston", "consulting"): ("Boston Consulting Group", "", "Management consulting firm"),
     # Keys must use stemmed_tokens() form (siemens → siemen).
     ("siemen",): ("Siemens AG", "SIEGY"),
     ("nestle",): ("Nestlé S.A.", "NSRGY"),
-    ("bain",): ("Bain & Company", ""),
+    ("bain",): ("Bain & Company", "", "Management consulting firm"),
+    ("spacex",): ("SpaceX", "", "Aerospace manufacturer and spaceflight company"),
+    ("openai",): ("OpenAI", "", "Artificial intelligence research company"),
 }
 
 
@@ -138,23 +163,15 @@ class CompanyResolution:
 class CompanyLookupService:
     def __init__(self, market_service: MarketDataService | None = None) -> None:
         self.market_service = market_service or MarketDataService()
-        self._client = httpx.Client(
-            timeout=20.0,
-            headers={"User-Agent": USER_AGENT},
-            follow_redirects=True,
-        )
-        self._suggest_client = httpx.Client(
-            timeout=6.0,
-            headers={"User-Agent": USER_AGENT},
-            follow_redirects=True,
-        )
+        # Shared pooled clients (Wikimedia-compliant UA + circuit breaker).
+        self._client = get_http_client()
+        self._suggest_client = get_fast_http_client()
 
     def close(self) -> None:
-        self._client.close()
-        self._suggest_client.close()
+        """No-op: HTTP clients are shared process-wide."""
 
     def suggest(self, query: str, *, limit: int = 6) -> list[CompanySuggestion]:
-        """Fast autocomplete: Clearbit-first, optional tiny probe set, strict floor."""
+        """Fast autocomplete: known + Clearbit first; Yahoo/Wiki only if still empty."""
         cleaned = " ".join((query or "").strip().split())
         if len(cleaned) < 2 or not re.search(r"[A-Za-z]", cleaned):
             return []
@@ -164,7 +181,11 @@ class CompanyLookupService:
 
         out: list[CompanySuggestion] = []
         seen_domains: set[str] = set()
-        for term in self._near_query_variants(cleaned):
+
+        # Instant local hits before any network (Bain, Siemens, mega-caps).
+        out.extend(self._known_company_fallbacks(parts))
+
+        for term in self._near_query_variants(cleaned)[:2]:
             try:
                 rows = self._fetch_clearbit(term, client=self._suggest_client)
                 self._ingest_clearbit_rows(parts, rows, out=out, seen_domains=seen_domains)
@@ -173,17 +194,16 @@ class CompanyLookupService:
                     "Autocomplete suggest failed query=%r term=%r", cleaned, term, exc_info=True
                 )
 
-        # Short brands/tickers + plural near-misses: Yahoo recovers AMD / Q2 / etc.
         strong = [item for item in out if item.confidence >= AUTOCOMPLETE_CONFIDENCE]
-        if len(strong) < 2:
+        # Avoid Yahoo/Wiki while typing unless Clearbit is empty — they burn rate limits.
+        if len(strong) < 1 and len(parts.compact) >= 4:
             try:
                 out.extend(self._yahoo_candidates(parts))
             except Exception:
                 logger.warning("Autocomplete yahoo fallback failed query=%r", cleaned, exc_info=True)
 
-        # Newer brand names (SpaceXAI) can be missing from Clearbit but present on Wikipedia.
         strong = [item for item in out if item.confidence >= AUTOCOMPLETE_CONFIDENCE]
-        if len(strong) < 2:
+        if len(strong) < 1 and len(parts.compact) >= 5:
             try:
                 out.extend(self._wikipedia_candidates(parts))
             except Exception:
@@ -191,14 +211,10 @@ class CompanyLookupService:
                     "Autocomplete wikipedia fallback failed query=%r", cleaned, exc_info=True
                 )
 
+        # Short-prefix Clearbit probes only when still thin (Red Hat / Pink Lily).
         strong = [item for item in out if item.confidence >= AUTOCOMPLETE_CONFIDENCE]
-        if len(strong) < 1:
-            out.extend(self._known_company_fallbacks(parts))
-
-        # For short prefixes, one parallel probe burst fills Red Hat / Pink Lily gaps.
-        strong = [item for item in out if item.confidence >= AUTOCOMPLETE_CONFIDENCE]
-        if " " not in cleaned and 3 <= len(cleaned) <= 6 and len(strong) < 3:
-            probe_terms = [f"{cleaned} {suffix}" for suffix in _SHORT_QUERY_PROBES[:3]]
+        if " " not in cleaned and 4 <= len(cleaned) <= 6 and len(strong) < 2:
+            probe_terms = [f"{cleaned} {suffix}" for suffix in _SHORT_QUERY_PROBES[:2]]
 
             def _probe(term: str) -> list[Any]:
                 try:
@@ -206,7 +222,7 @@ class CompanyLookupService:
                 except Exception:
                     return []
 
-            with ThreadPoolExecutor(max_workers=3) as pool:
+            with ThreadPoolExecutor(max_workers=2) as pool:
                 for rows in pool.map(_probe, probe_terms):
                     if rows:
                         self._ingest_clearbit_rows(
@@ -239,6 +255,55 @@ class CompanyLookupService:
             if len(suggestions) >= limit:
                 break
         return suggestions
+
+    def quick_verify(self, company_name: str) -> tuple[str, str | None] | None:
+        """Cheap identity check for analyze after client resolve — no Wiki/Yahoo burst.
+
+        Returns (matched_name, ticker) when known stems or Clearbit prove company-grade.
+        """
+        cleaned = " ".join((company_name or "").strip().split())
+        if len(cleaned) < 2:
+            return None
+        cache_key = f"quick:{cleaned.lower()}"
+        cached = lookup_cache.get(cache_key)
+        if isinstance(cached, dict) and cached.get("name"):
+            return str(cached["name"]), cached.get("ticker")
+
+        parts = self._query_parts(cleaned)
+        candidates = self._known_company_fallbacks(parts)
+        try:
+            clearbit = self._clearbit_candidates(parts)
+            candidates.extend(clearbit)
+        except Exception:
+            logger.warning("quick_verify clearbit failed company=%r", cleaned, exc_info=True)
+
+        company_grade = [item for item in candidates if self._is_company_grade(item)]
+        exact_hits = [
+            item
+            for item in company_grade
+            if self._is_exact_match(parts, item) and item.confidence >= EXACT_CONFIDENCE
+        ]
+        if not exact_hits:
+            return None
+        chosen = exact_hits[0]
+        if description_is_rejected(chosen.description):
+            return None
+        raw_tokens = tuple(re.findall(r"[a-z0-9]+", cleaned.lower()))
+        label_tokens = tuple(re.findall(r"[a-z0-9]+", chosen.name.lower()))
+        accepted = (
+            self._should_auto_analyze(parts, chosen, company_grade)
+            or raw_tokens == label_tokens
+            or normalize_name(chosen.name) == parts.norm
+        )
+        if not accepted:
+            return None
+        lookup_cache.set(
+            cache_key,
+            {"name": chosen.name, "ticker": chosen.ticker},
+            ttl_seconds=600,
+            stale_seconds=1800,
+        )
+        return chosen.name, chosen.ticker
 
     def resolve(self, query: str, *, limit: int = 8) -> CompanyResolution:
         cleaned = " ".join((query or "").strip().split())
@@ -389,13 +454,15 @@ class CompanyLookupService:
         hit = _KNOWN_STEM_COMPANIES.get(stem)
         if not hit:
             return []
-        name, ticker = hit
+        name = hit[0]
+        ticker = hit[1]
+        private_blurb = hit[2] if len(hit) > 2 else "Private company"
         if ticker:
             description = f"Public company · {ticker}"
             source = "yahoo"
             location = "NMS"
         else:
-            description = "Management consulting firm"
+            description = private_blurb
             source = "wikipedia"
             location = None
         scored = self._score_parts(
@@ -494,15 +561,30 @@ class CompanyLookupService:
             )
 
     def _fetch_clearbit(self, term: str, *, client: httpx.Client | None = None) -> list[Any]:
-        http = client or self._client
-        response = http.get(
-            CLEARBIT_SUGGEST_API,
-            params={"query": term},
-            headers={"Accept": "application/json"},
-        )
-        response.raise_for_status()
-        rows = response.json()
-        return rows if isinstance(rows, list) else []
+        cache_key = f"clearbit:{term.lower()}"
+        cached = lookup_cache.get(cache_key)
+        if isinstance(cached, list):
+            return cached
+        http = client or self._suggest_client
+        try:
+            response = http.get(
+                CLEARBIT_SUGGEST_API,
+                params={"query": term},
+                headers={"Accept": "application/json"},
+            )
+            if response.status_code in {403, 429} or response.status_code >= 500:
+                logger.warning(
+                    "Clearbit soft-fail status=%s term=%r", response.status_code, term
+                )
+                return []
+            response.raise_for_status()
+            rows = response.json()
+            payload = rows if isinstance(rows, list) else []
+        except Exception:
+            logger.warning("Clearbit request failed term=%r", term, exc_info=True)
+            return []
+        lookup_cache.set(cache_key, payload, ttl_seconds=300, stale_seconds=900)
+        return payload
 
     def _clearbit_candidates(self, parts: _QueryParts) -> list[CompanySuggestion]:
         out: list[CompanySuggestion] = []
@@ -651,32 +733,21 @@ class CompanyLookupService:
         hits: list[dict[str, Any]] = []
         seen_page_ids: set[int] = set()
         for term in self._near_query_variants(parts.raw):
-            try:
-                response = self._client.get(
-                    WIKIPEDIA_API,
-                    params={
-                        "action": "query",
-                        "list": "search",
-                        "srsearch": term,
-                        "srlimit": 8,
-                        "format": "json",
-                    },
-                )
-                if response.status_code in {403, 429} or response.status_code >= 500:
-                    logger.warning(
-                        "Wikipedia company lookup soft-fail status=%s query=%r term=%r",
-                        response.status_code,
-                        parts.raw,
-                        term,
-                    )
-                    continue
-                response.raise_for_status()
-            except Exception:
-                logger.warning(
-                    "Wikipedia company lookup failed query=%r term=%r", parts.raw, term, exc_info=True
-                )
+            payload = get_json(
+                WIKIPEDIA_API,
+                params={
+                    "action": "query",
+                    "list": "search",
+                    "srsearch": term,
+                    "srlimit": 8,
+                    "format": "json",
+                },
+                client=self._client,
+                label="wikipedia lookup",
+            )
+            if not payload:
                 continue
-            for hit in ((response.json().get("query") or {}).get("search")) or []:
+            for hit in ((payload.get("query") or {}).get("search")) or []:
                 if not isinstance(hit, dict):
                     continue
                 page_id = hit.get("pageid")
@@ -731,7 +802,7 @@ class CompanyLookupService:
 
         def _pull(term: str) -> None:
             nonlocal results
-            response = self._client.get(
+            payload = get_json(
                 WIKIDATA_API,
                 params={
                     "action": "wbsearchentities",
@@ -741,17 +812,12 @@ class CompanyLookupService:
                     "limit": 8,
                     "format": "json",
                 },
+                client=self._client,
+                label="wikidata lookup",
             )
-            if response.status_code in {403, 429} or response.status_code >= 500:
-                logger.warning(
-                    "Wikidata company lookup soft-fail status=%s query=%r term=%r",
-                    response.status_code,
-                    parts.raw,
-                    term,
-                )
+            if not payload:
                 return
-            response.raise_for_status()
-            for item in response.json().get("search") or []:
+            for item in payload.get("search") or []:
                 qid = str(item.get("id") or "")
                 if qid and qid in seen_ids:
                     continue
@@ -1010,6 +1076,9 @@ class CompanyLookupService:
         if isinstance(parts, str):
             parts = self._query_parts(parts)
         return self._classify_match(parts, label) != "none"
+
+    def is_company_grade(self, suggestion: CompanySuggestion) -> bool:
+        return self._is_company_grade(suggestion)
 
     def _is_company_grade(self, suggestion: CompanySuggestion) -> bool:
         if description_is_rejected(suggestion.description):

@@ -82,8 +82,8 @@ def suggest_companies(
         }
         for item in items
     ]
-    # Don't pin empty misses for long — near-miss fixes / upstream recovery should retry soon.
-    suggest_cache.set(cache_key, payload, ttl_seconds=20 if not payload else 120)
+    # Empty misses: short TTL so recovery is possible; hits stay warm longer.
+    suggest_cache.set(cache_key, payload, ttl_seconds=45 if not payload else 180)
     logger.info("Company suggest query=%r suggestions=%s ip=%s", cleaned, len(payload), client)
     return SuggestCompaniesResponse.model_validate({"query": cleaned, "suggestions": payload})
 
@@ -127,18 +127,58 @@ async def analyze_company(
         user.id,
     )
 
-    # Confidence gate: only high-confidence exact company names proceed to insights.
-    # Exception: user explicitly picked a suggestion card (confirmed=True) — still
-    # re-resolve so given-name pages cannot bypass via autocomplete.
-    if payload.confirmed:
-        company_name = payload.company_name
-        logger.info("Analyze confirmed suggestion company=%r user_id=%s", company_name, user.id)
-        resolution = lookup.resolve(company_name)
-        if resolution.status != "exact" or not resolution.matched_name:
-            raise BadRequestError(
-                resolution.message or "No valid companies found with this name."
-            )
-        company_name = resolution.matched_name
+    # Prefer cheap verify when the client already resolved/confirmed — avoids a
+    # second Wiki/Yahoo/Clearbit burst on every Generate.
+    company_name = payload.company_name
+    ticker_hint = (payload.ticker or "").strip().upper() or None
+    if payload.resolved or payload.confirmed:
+        logger.info(
+            "Analyze fast-path resolved=%s confirmed=%s company=%r user_id=%s",
+            payload.resolved,
+            payload.confirmed,
+            company_name,
+            user.id,
+        )
+        quick = lookup.quick_verify(company_name)
+        if quick:
+            company_name, quick_ticker = quick
+            ticker_hint = ticker_hint or quick_ticker
+        else:
+            resolution = lookup.resolve(company_name)
+            if resolution.status != "exact" or not resolution.matched_name:
+                if (
+                    payload.confirmed
+                    and resolution.status == "ambiguous"
+                    and resolution.suggestions
+                ):
+                    # User picked a suggestion card — accept that exact name if present.
+                    picked = next(
+                        (
+                            item
+                            for item in resolution.suggestions
+                            if item.name.strip().lower() == company_name.strip().lower()
+                        ),
+                        resolution.suggestions[0],
+                    )
+                    if not lookup.is_company_grade(picked):
+                        raise BadRequestError(
+                            resolution.message or "No valid companies found with this name."
+                        )
+                    company_name = picked.name
+                    ticker_hint = ticker_hint or picked.ticker
+                else:
+                    if resolution.status == "ambiguous" and resolution.suggestions:
+                        names = ", ".join(item.name for item in resolution.suggestions[:5])
+                        raise BadRequestError(
+                            f"{resolution.message} Suggestions: {names}."
+                        )
+                    raise BadRequestError(
+                        resolution.message or "No valid companies found with this name."
+                    )
+            else:
+                company_name = resolution.matched_name
+                if resolution.suggestions:
+                    ticker_hint = ticker_hint or resolution.suggestions[0].ticker
     else:
         resolution = lookup.resolve(payload.company_name)
         if resolution.status != "exact" or not resolution.matched_name:
@@ -149,6 +189,8 @@ async def analyze_company(
                 )
             raise BadRequestError(resolution.message or "No valid companies found with this name.")
         company_name = resolution.matched_name
+        if resolution.suggestions:
+            ticker_hint = ticker_hint or resolution.suggestions[0].ticker
 
     # Cache hits are free (no NewsAPI / LLM). Only throttle paths that hit upstream.
     if not payload.force_refresh:
@@ -176,6 +218,7 @@ async def analyze_company(
         user_id=user.id,
         confirmed=payload.confirmed,
         identity_verified=True,
+        ticker=ticker_hint,
     )
     logger.info(
         "Analyze completed company=%r id=%s cached=%s model=%s",

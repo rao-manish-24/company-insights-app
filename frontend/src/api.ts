@@ -159,7 +159,12 @@ export async function suggestCompanies(query: string): Promise<CompanySuggestion
 export function analyzeCompany(
   companyName: string,
   forceRefresh = false,
-  options?: { confirmed?: boolean; signal?: AbortSignal },
+  options?: {
+    confirmed?: boolean
+    resolved?: boolean
+    ticker?: string | null
+    signal?: AbortSignal
+  },
 ): Promise<CompanyAnalysis> {
   return request<CompanyAnalysis>('/analyze', {
     method: 'POST',
@@ -168,6 +173,8 @@ export function analyzeCompany(
       company_name: companyName,
       force_refresh: forceRefresh,
       confirmed: Boolean(options?.confirmed),
+      resolved: Boolean(options?.resolved),
+      ticker: options?.ticker || undefined,
     }),
     signal: options?.signal,
   })

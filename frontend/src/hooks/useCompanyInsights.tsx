@@ -232,12 +232,19 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       companyName: string,
       forceRefresh: boolean,
       requestId: number,
-      options?: { confirmed?: boolean; signal?: AbortSignal },
+      options?: {
+        confirmed?: boolean
+        resolved?: boolean
+        ticker?: string | null
+        signal?: AbortSignal
+      },
     ): Promise<RunAnalysisResult> => {
       const started = performance.now()
       setLoadingMode('analyze')
       const result = await analyzeCompany(companyName, forceRefresh, {
         confirmed: options?.confirmed,
+        resolved: options?.resolved,
+        ticker: options?.ticker,
         signal: options?.signal,
       })
       if (requestId !== requestIdRef.current) return 'aborted'
@@ -264,7 +271,11 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
     async (
       companyName: string,
       forceRefresh = false,
-      options?: { skipResolve?: boolean; confirmed?: boolean },
+      options?: {
+        skipResolve?: boolean
+        confirmed?: boolean
+        ticker?: string | null
+      },
     ): Promise<RunAnalysisResult> => {
       const trimmed = companyName.trim()
       if (!trimmed) {
@@ -309,6 +320,8 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
 
       try {
         let target = trimmed
+        let resolvedExact = Boolean(options?.skipResolve && options?.confirmed)
+        let tickerHint = options?.ticker ?? null
         if (!options?.skipResolve) {
           const resolution = await resolveCompany(trimmed, { signal })
           if (requestId !== requestIdRef.current) return 'aborted'
@@ -332,6 +345,11 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
 
           if (resolution.status === 'exact' && resolution.matched_name) {
             target = resolution.matched_name
+            resolvedExact = true
+            tickerHint =
+              resolution.suggestions?.find((item) => item.name === target)?.ticker ??
+              resolution.suggestions?.[0]?.ticker ??
+              null
             setQueryState(target)
           } else {
             setError(resolution.message || 'No valid companies found with this name.')
@@ -341,6 +359,8 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
 
         return await executeAnalyze(target, forceRefresh, requestId, {
           confirmed: Boolean(options?.confirmed),
+          resolved: resolvedExact,
+          ticker: tickerHint,
           signal,
         })
       } catch (err) {
@@ -455,7 +475,11 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       clearAutocomplete()
       setSuggestions([])
       setSuggestionMessage(null)
-      return runAnalysis(suggestion.name, false, { skipResolve: true, confirmed: true })
+      return runAnalysis(suggestion.name, false, {
+        skipResolve: true,
+        confirmed: true,
+        ticker: suggestion.ticker,
+      })
     },
     [runAnalysis, clearAutocomplete],
   )

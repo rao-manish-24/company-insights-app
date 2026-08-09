@@ -8,16 +8,14 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-import httpx
-
 from app.core.config import Settings, get_settings
+from app.core.http import get_http_client, get_json
 from app.core.rate_limit import profile_cache
 
 logger = logging.getLogger(__name__)
 
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
-USER_AGENT = "CompanyInsights/1.1 (partner briefing prototype; educational use)"
 
 # Wikidata property ids
 P_INCEPTION = "P571"
@@ -84,14 +82,10 @@ def empty_profile() -> dict[str, Any]:
 class CompanyProfileService:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
-        self._client = httpx.Client(
-            timeout=25.0,
-            headers={"User-Agent": USER_AGENT},
-            follow_redirects=True,
-        )
+        self._client = get_http_client()
 
     def close(self) -> None:
-        self._client.close()
+        """No-op: the HTTP client is shared process-wide and closed at shutdown."""
 
     def fetch_profile(self, company_name: str) -> dict[str, Any]:
         cache_key = f"profile:{' '.join(company_name.strip().lower().split())}"
@@ -207,22 +201,8 @@ class CompanyProfileService:
         return profile
 
     def _get_json(self, url: str, *, params: dict[str, Any]) -> dict[str, Any] | None:
-        """GET JSON; treat 429/5xx as soft miss so callers can use cache."""
-        try:
-            response = self._client.get(url, params=params)
-            if response.status_code == 429 or response.status_code >= 500:
-                logger.warning(
-                    "Upstream profile soft-fail status=%s url=%s",
-                    response.status_code,
-                    url,
-                )
-                return None
-            response.raise_for_status()
-            data = response.json()
-            return data if isinstance(data, dict) else None
-        except Exception:
-            logger.warning("Upstream profile request failed url=%s", url, exc_info=True)
-            return None
+        """GET JSON; refusals/outages return None so callers can fall back."""
+        return get_json(url, params=params, client=self._client, label="company profile")
 
     def _wikipedia_key_people(
         self,
