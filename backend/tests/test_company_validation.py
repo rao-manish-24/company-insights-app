@@ -24,6 +24,27 @@ def test_assert_valid_company_accepts_google_via_alphabet_ticker() -> None:
     )
 
 
+def test_assert_valid_company_allows_resolved_when_upstream_empty() -> None:
+    # Wikidata/Yahoo rate-limited after resolve already proved Siemens is a company.
+    assert_valid_company("Siemens", profile={}, market={}, identity_verified=True)
+
+
+def test_assert_valid_company_rejects_given_name_even_when_verified() -> None:
+    try:
+        assert_valid_company(
+            "Manish",
+            profile={
+                "matched_label": "Manish",
+                "matched_description": "male given name",
+            },
+            market={},
+            identity_verified=True,
+        )
+        raise AssertionError("expected BadRequestError")
+    except BadRequestError as exc:
+        assert "Not a valid company name" in exc.detail
+
+
 def test_assert_valid_company_rejects_given_name() -> None:
     try:
         assert_valid_company(

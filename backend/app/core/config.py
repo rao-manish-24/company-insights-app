@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     # Prefer cache to protect NewsAPI + LLM free-tier quotas
     analysis_cache_hours: int = 24
     news_cache_minutes: int = 60
+    # Wikidata / Wikipedia / Yahoo — reuse across resolve + analyze
+    upstream_cache_minutes: int = 120
     # API self-throttling (process-local)
     analyze_rate_limit: int = 20
     analyze_rate_window_seconds: int = 3600

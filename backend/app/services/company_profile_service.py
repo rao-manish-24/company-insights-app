@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import re
 from typing import Any
@@ -10,6 +11,7 @@ from urllib.parse import quote
 import httpx
 
 from app.core.config import Settings, get_settings
+from app.core.rate_limit import profile_cache
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +94,12 @@ class CompanyProfileService:
         self._client.close()
 
     def fetch_profile(self, company_name: str) -> dict[str, Any]:
+        cache_key = f"profile:{' '.join(company_name.strip().lower().split())}"
+        cached = profile_cache.get(cache_key)
+        if isinstance(cached, dict):
+            logger.info("Company profile cache hit company=%r", company_name)
+            return copy.deepcopy(cached)
+
         profile = empty_profile()
         try:
             qid = self._search_entity(company_name)
@@ -106,10 +114,14 @@ class CompanyProfileService:
                     profile["source"] = "Wikipedia"
                     profile["wikipedia_url"] = wiki_url
                     profile["source_url"] = wiki_url
-                return profile
+                return self._store_profile(cache_key, profile)
 
             entity = self._get_entity(qid)
             if not entity:
+                stale = profile_cache.get(cache_key, allow_stale=True)
+                if isinstance(stale, dict):
+                    logger.info("Company profile stale cache after empty entity company=%r", company_name)
+                    return copy.deepcopy(stale)
                 return profile
 
             claims = entity.get("claims") or {}
@@ -163,9 +175,13 @@ class CompanyProfileService:
                 people.get("CEO"),
                 wiki_filled,
             )
-            return profile
+            return self._store_profile(cache_key, profile)
         except Exception:
             logger.exception("Company profile fetch failed company=%r", company_name)
+            stale = profile_cache.get(cache_key, allow_stale=True)
+            if isinstance(stale, dict):
+                logger.info("Company profile stale cache after error company=%r", company_name)
+                return copy.deepcopy(stale)
             # Wikidata rate-limits / outages should not block Wikipedia key-people fill.
             try:
                 wiki_people, wiki_url = self._wikipedia_key_people(company_name, entity=None)
@@ -176,11 +192,37 @@ class CompanyProfileService:
                     profile["source"] = "Wikipedia"
                     profile["wikipedia_url"] = wiki_url
                     profile["source_url"] = wiki_url
+                    return self._store_profile(cache_key, profile)
             except Exception:
                 logger.warning(
                     "Wikipedia key-people fallback failed company=%r", company_name, exc_info=True
                 )
             return profile
+
+    def _store_profile(self, cache_key: str, profile: dict[str, Any]) -> dict[str, Any]:
+        # Only cache populated profiles so empty 429 responses do not poison the key.
+        if profile.get("source") or profile.get("matched_label") or profile.get("founded"):
+            ttl = max(60, self.settings.upstream_cache_minutes * 60)
+            profile_cache.set(cache_key, copy.deepcopy(profile), ttl, stale_seconds=ttl * 3)
+        return profile
+
+    def _get_json(self, url: str, *, params: dict[str, Any]) -> dict[str, Any] | None:
+        """GET JSON; treat 429/5xx as soft miss so callers can use cache."""
+        try:
+            response = self._client.get(url, params=params)
+            if response.status_code == 429 or response.status_code >= 500:
+                logger.warning(
+                    "Upstream profile soft-fail status=%s url=%s",
+                    response.status_code,
+                    url,
+                )
+                return None
+            response.raise_for_status()
+            data = response.json()
+            return data if isinstance(data, dict) else None
+        except Exception:
+            logger.warning("Upstream profile request failed url=%s", url, exc_info=True)
+            return None
 
     def _wikipedia_key_people(
         self,
@@ -224,7 +266,7 @@ class CompanyProfileService:
                 return title
 
         # Fallback: Wikipedia search, prefer company/org-ish titles.
-        response = self._client.get(
+        payload = self._get_json(
             WIKIPEDIA_API,
             params={
                 "action": "query",
@@ -234,8 +276,9 @@ class CompanyProfileService:
                 "format": "json",
             },
         )
-        response.raise_for_status()
-        hits = ((response.json().get("query") or {}).get("search")) or []
+        if not payload:
+            return None
+        hits = ((payload.get("query") or {}).get("search")) or []
         if not hits:
             return None
         from app.services.company_validation import names_align
@@ -247,7 +290,7 @@ class CompanyProfileService:
         return (hits[0].get("title") or "").strip() or None
 
     def _fetch_wikipedia_wikitext(self, title: str) -> str | None:
-        response = self._client.get(
+        payload = self._get_json(
             WIKIPEDIA_API,
             params={
                 "action": "query",
@@ -260,8 +303,9 @@ class CompanyProfileService:
                 "format": "json",
             },
         )
-        response.raise_for_status()
-        pages = ((response.json().get("query") or {}).get("pages")) or {}
+        if not payload:
+            return None
+        pages = ((payload.get("query") or {}).get("pages")) or {}
         for page in pages.values():
             if page.get("missing") is not None:
                 continue
@@ -432,7 +476,7 @@ class CompanyProfileService:
             names_align,
         )
 
-        response = self._client.get(
+        payload = self._get_json(
             WIKIDATA_API,
             params={
                 "action": "wbsearchentities",
@@ -443,8 +487,9 @@ class CompanyProfileService:
                 "format": "json",
             },
         )
-        response.raise_for_status()
-        results = response.json().get("search") or []
+        if not payload:
+            return None
+        results = payload.get("search") or []
         if not results:
             return None
 
@@ -466,7 +511,7 @@ class CompanyProfileService:
         return None
 
     def _get_entity(self, qid: str) -> dict[str, Any] | None:
-        response = self._client.get(
+        payload = self._get_json(
             WIKIDATA_API,
             params={
                 "action": "wbgetentities",
@@ -477,8 +522,9 @@ class CompanyProfileService:
                 "format": "json",
             },
         )
-        response.raise_for_status()
-        return (response.json().get("entities") or {}).get(qid)
+        if not payload:
+            return None
+        return (payload.get("entities") or {}).get(qid)
 
     def _mainsnak_value(self, claim_list: list[dict[str, Any]] | None) -> Any | None:
         if not claim_list:
@@ -562,7 +608,7 @@ class CompanyProfileService:
     def _entity_label(self, qid: str | None) -> str | None:
         if not qid:
             return None
-        response = self._client.get(
+        payload = self._get_json(
             WIKIDATA_API,
             params={
                 "action": "wbgetentities",
@@ -572,8 +618,9 @@ class CompanyProfileService:
                 "format": "json",
             },
         )
-        response.raise_for_status()
-        entity = (response.json().get("entities") or {}).get(qid) or {}
+        if not payload:
+            return None
+        entity = (payload.get("entities") or {}).get(qid) or {}
         return ((entity.get("labels") or {}).get("en") or {}).get("value")
 
     @staticmethod

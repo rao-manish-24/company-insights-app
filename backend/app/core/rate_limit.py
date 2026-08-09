@@ -25,25 +25,37 @@ class RateLimitError(AppError):
 class _CacheEntry:
     value: Any
     expires_at: float
+    stale_until: float
 
 
 class TtlCache:
-    """Simple process-local TTL cache."""
+    """Simple process-local TTL cache with optional stale-while-revalidate reads."""
 
     def __init__(self) -> None:
         self._store: dict[str, _CacheEntry] = {}
 
-    def get(self, key: str) -> Any | None:
+    def get(self, key: str, *, allow_stale: bool = False) -> Any | None:
         entry = self._store.get(key)
         if not entry:
             return None
-        if time.time() >= entry.expires_at:
+        now = time.time()
+        if now >= entry.stale_until:
             self._store.pop(key, None)
             return None
-        return entry.value
+        if now < entry.expires_at:
+            return entry.value
+        # Soft-expired: keep for stale-while-revalidate callers only.
+        return entry.value if allow_stale else None
 
-    def set(self, key: str, value: Any, ttl_seconds: int) -> None:
-        self._store[key] = _CacheEntry(value=value, expires_at=time.time() + ttl_seconds)
+    def set(self, key: str, value: Any, ttl_seconds: int, *, stale_seconds: int | None = None) -> None:
+        now = time.time()
+        soft = max(1, int(ttl_seconds))
+        hard = soft + max(0, int(stale_seconds if stale_seconds is not None else soft * 3))
+        self._store[key] = _CacheEntry(
+            value=value,
+            expires_at=now + soft,
+            stale_until=now + hard,
+        )
 
 
 class SlidingWindowRateLimiter:
@@ -96,6 +108,8 @@ class SingleFlight:
 
 # Shared process singletons
 news_cache = TtlCache()
+profile_cache = TtlCache()
+market_cache = TtlCache()
 analyze_singleflight = SingleFlight()
 analyze_rate_limiter = SlidingWindowRateLimiter()
 refresh_rate_limiter = SlidingWindowRateLimiter()

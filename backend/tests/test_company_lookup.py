@@ -99,6 +99,24 @@ def test_near_plural_matches_as_exact() -> None:
     assert fallbacks and fallbacks[0].ticker == "AMD"
 
 
+def test_bain_known_fallback_private_firm() -> None:
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    for query in ("Bain", "Bain & Company"):
+        parts = service._query_parts(query)
+        fallbacks = service._known_company_fallbacks(parts)
+        assert fallbacks, query
+        assert fallbacks[0].name == "Bain & Company"
+        assert fallbacks[0].ticker is None
+        assert fallbacks[0].source == "wikipedia"
+
+
+def test_siemens_known_fallback_uses_stemmed_key() -> None:
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    fallbacks = service._known_company_fallbacks(service._query_parts("Siemens"))
+    assert fallbacks and fallbacks[0].name == "Siemens AG"
+    assert fallbacks[0].ticker == "SIEGY"
+
+
 def test_wikipedia_exact_brand_scores_high() -> None:
     service = CompanyLookupService.__new__(CompanyLookupService)
     score = service._score(

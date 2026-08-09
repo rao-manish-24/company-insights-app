@@ -86,6 +86,7 @@ _SOURCE_RANK = {"wikidata": 0, "wikipedia": 1, "yahoo": 2, "clearbit": 3}
 
 # Canonical rescue when upstream search is thin (Render IP blocks / empty Clearbit).
 # Keys are stemmed token tuples from company_validation.stemmed_tokens().
+# Values: (canonical name, ticker or "" for private firms).
 _KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str]] = {
     ("advanced", "micro", "device"): ("Advanced Micro Devices, Inc.", "AMD"),
     ("apple",): ("Apple Inc.", "AAPL"),
@@ -97,6 +98,10 @@ _KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str]] = {
     ("google",): ("Alphabet Inc.", "GOOGL"),
     ("meta",): ("Meta Platforms, Inc.", "META"),
     ("netflix",): ("Netflix, Inc.", "NFLX"),
+    # Keys must use stemmed_tokens() form (siemens → siemen).
+    ("siemen",): ("Siemens AG", "SIEGY"),
+    ("nestle",): ("Nestlé S.A.", "NSRGY"),
+    ("bain",): ("Bain & Company", ""),
 }
 
 
@@ -387,23 +392,31 @@ class CompanyLookupService:
         if not hit:
             return []
         name, ticker = hit
+        if ticker:
+            description = f"Public company · {ticker}"
+            source = "yahoo"
+            location = "NMS"
+        else:
+            description = "Management consulting firm"
+            source = "wikipedia"
+            location = None
         scored = self._score_parts(
             parts,
             name,
-            f"Public company · {ticker}",
-            source="yahoo",
-            ticker=ticker,
+            description,
+            source=source,
+            ticker=ticker or None,
         )
         if scored["confidence"] < SUGGEST_CONFIDENCE:
             return []
         return [
             CompanySuggestion(
                 name=name,
-                description=f"Public company · {ticker}",
+                description=description,
                 confidence=max(scored["confidence"], 0.93),
-                source="yahoo",
-                ticker=ticker,
-                location="NMS",
+                source=source,
+                ticker=ticker or None,
+                location=location,
                 match_kind=scored["match_kind"],
             )
         ]

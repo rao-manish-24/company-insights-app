@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import re
 import time
@@ -9,6 +10,9 @@ from typing import Any
 
 import httpx
 import yfinance as yf
+
+from app.core.config import get_settings
+from app.core.rate_limit import market_cache
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +46,10 @@ _KNOWN_TICKERS: dict[str, str] = {
     "adobe": "ADBE",
     "amd": "AMD",
     "advanced micro devices": "AMD",
+    "siemens": "SIEGY",
+    "siemens ag": "SIEGY",
+    "nestle": "NSRGY",
+    "nestlé": "NSRGY",
 }
 
 
@@ -88,10 +96,20 @@ class MarketDataService:
         if not cleaned:
             return market
 
+        cache_key = f"market:{cleaned.lower()}"
+        cached = market_cache.get(cache_key)
+        if isinstance(cached, dict):
+            logger.info("Yahoo Finance cache hit company=%r", cleaned)
+            return copy.deepcopy(cached)
+
         try:
             ticker = self._resolve_ticker(cleaned)
             if not ticker:
                 logger.info("Yahoo Finance: no ticker for company=%r", cleaned)
+                stale = market_cache.get(cache_key, allow_stale=True)
+                if isinstance(stale, dict):
+                    logger.info("Yahoo Finance stale cache after empty ticker company=%r", cleaned)
+                    return copy.deepcopy(stale)
                 return market
 
             info = self._fetch_info_bundle(ticker)
@@ -156,10 +174,20 @@ class MarketDataService:
                 market["price"],
                 market["market_cap"],
             )
-            return market
+            return self._store_market(cache_key, market)
         except Exception:
             logger.exception("Yahoo Finance fetch failed company=%r", cleaned)
+            stale = market_cache.get(cache_key, allow_stale=True)
+            if isinstance(stale, dict):
+                logger.info("Yahoo Finance stale cache after error company=%r", cleaned)
+                return copy.deepcopy(stale)
             return empty_market()
+
+    def _store_market(self, cache_key: str, market: dict[str, Any]) -> dict[str, Any]:
+        if market.get("ticker"):
+            ttl = max(60, get_settings().upstream_cache_minutes * 60)
+            market_cache.set(cache_key, copy.deepcopy(market), ttl, stale_seconds=ttl * 3)
+        return market
 
     def apply_to_profile(self, profile: dict[str, Any], market: dict[str, Any]) -> dict[str, Any]:
         if not market or not market.get("ticker"):
@@ -281,10 +309,17 @@ class MarketDataService:
                     "enableFuzzyQuery": "false",
                 },
             )
+            if response.status_code == 429 or response.status_code >= 500:
+                logger.warning(
+                    "Yahoo search soft-fail status=%s company=%r",
+                    response.status_code,
+                    company_name,
+                )
+                return []
             response.raise_for_status()
             return list(response.json().get("quotes") or [])
         except Exception:
-            logger.exception("Yahoo search failed company=%r", company_name)
+            logger.warning("Yahoo search failed company=%r", company_name, exc_info=True)
             return []
 
     def _fetch_info_bundle(self, ticker: str) -> dict[str, Any]:
@@ -317,33 +352,29 @@ class MarketDataService:
         return merged
 
     def _fetch_yfinance_info(self, ticker: str) -> dict[str, Any] | None:
-        last_error: Exception | None = None
-        for attempt in range(3):
-            try:
-                data = yf.Ticker(ticker).info
-                if isinstance(data, dict) and any(
-                    key in data
-                    for key in (
-                        "regularMarketPrice",
-                        "currentPrice",
-                        "marketCap",
-                        "shortName",
-                        "longName",
-                        "trailingPE",
-                    )
-                ):
-                    return data
+        # One attempt only — retries under 429 make Yahoo throttle harder.
+        try:
+            data = yf.Ticker(ticker).info
+            if isinstance(data, dict) and any(
+                key in data
+                for key in (
+                    "regularMarketPrice",
+                    "currentPrice",
+                    "marketCap",
+                    "shortName",
+                    "longName",
+                    "trailingPE",
+                )
+            ):
+                return data
+            return None
+        except Exception as exc:
+            message = str(exc).lower()
+            if "rate" in message or "too many" in message:
+                logger.warning("yfinance .info rate-limited ticker=%s", ticker)
                 return None
-            except Exception as exc:
-                last_error = exc
-                message = str(exc).lower()
-                if "rate" in message or "too many" in message:
-                    time.sleep(1.2 * (attempt + 1))
-                    continue
-                logger.exception("yfinance .info failed ticker=%s", ticker)
-                return None
-        logger.warning("yfinance .info rate-limited ticker=%s error=%s", ticker, last_error)
-        return None
+            logger.warning("yfinance .info failed ticker=%s", ticker, exc_info=True)
+            return None
 
     def _chart_meta(self, ticker: str) -> dict[str, Any] | None:
         try:
@@ -351,6 +382,13 @@ class MarketDataService:
                 YAHOO_CHART.format(symbol=ticker),
                 params={"interval": "1d", "range": "5d"},
             )
+            if response.status_code == 429 or response.status_code >= 500:
+                logger.warning(
+                    "Yahoo chart soft-fail status=%s ticker=%s",
+                    response.status_code,
+                    ticker,
+                )
+                return None
             response.raise_for_status()
             result = ((response.json().get("chart") or {}).get("result") or [None])[0]
             if not result:

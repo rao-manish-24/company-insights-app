@@ -128,10 +128,17 @@ async def analyze_company(
     )
 
     # Confidence gate: only high-confidence exact company names proceed to insights.
-    # Exception: user explicitly picked a suggestion card (confirmed=True).
+    # Exception: user explicitly picked a suggestion card (confirmed=True) — still
+    # re-resolve so given-name pages cannot bypass via autocomplete.
     if payload.confirmed:
         company_name = payload.company_name
         logger.info("Analyze confirmed suggestion company=%r user_id=%s", company_name, user.id)
+        resolution = lookup.resolve(company_name)
+        if resolution.status != "exact" or not resolution.matched_name:
+            raise BadRequestError(
+                resolution.message or "No valid companies found with this name."
+            )
+        company_name = resolution.matched_name
     else:
         resolution = lookup.resolve(payload.company_name)
         if resolution.status != "exact" or not resolution.matched_name:
@@ -168,6 +175,7 @@ async def analyze_company(
         force_refresh=payload.force_refresh,
         user_id=user.id,
         confirmed=payload.confirmed,
+        identity_verified=True,
     )
     logger.info(
         "Analyze completed company=%r id=%s cached=%s model=%s",

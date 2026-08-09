@@ -115,6 +115,9 @@ _QUERY_TICKERS: dict[str, frozenset[str]] = {
     "amd": frozenset({"AMD"}),
     "advanced micro devices": frozenset({"AMD"}),
     "advanced micro device": frozenset({"AMD"}),
+    "siemens": frozenset({"SIEGY", "SIE.DE", "ENR.DE"}),
+    "nestle": frozenset({"NSRGY", "NESN.SW"}),
+    "nestlé": frozenset({"NSRGY", "NESN.SW"}),
 }
 
 
@@ -294,6 +297,7 @@ def assert_valid_company(
     *,
     profile: dict[str, Any] | None,
     market: dict[str, Any] | None,
+    identity_verified: bool = False,
 ) -> None:
     cleaned = " ".join((company_name or "").strip().split())
     if len(cleaned) < 2:
@@ -305,15 +309,26 @@ def assert_valid_company(
     wiki_ok = False
     matched = (profile or {}).get("matched_label") if isinstance(profile, dict) else None
     wiki_desc = (profile or {}).get("matched_description") if isinstance(profile, dict) else None
-    if matched and names_align(cleaned, str(matched)):
-        if description_looks_like_company(str(wiki_desc) if wiki_desc else None) or profile_has_company_signal(
-            profile
-        ):
+    matched_text = str(matched) if matched else ""
+    desc_text = str(wiki_desc) if wiki_desc else ""
+
+    if matched and names_align(cleaned, matched_text):
+        # Positive non-company evidence (given name / person) always rejects.
+        if description_is_rejected(desc_text):
+            raise BadRequestError(
+                f"Not a valid company name: “{cleaned}”. "
+                "Enter a real company (for example Microsoft, Nestlé, or Siemens)."
+            )
+        if description_looks_like_company(desc_text) or profile_has_company_signal(profile):
             wiki_ok = True
 
     market_ok = market_supports_company(cleaned, market)
 
     if wiki_ok or market_ok:
+        return
+
+    # Resolve already proved company-grade identity; profile/market may be rate-limited (429).
+    if identity_verified:
         return
 
     raise BadRequestError(

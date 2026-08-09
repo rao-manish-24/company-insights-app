@@ -108,6 +108,7 @@ class AnalysisService:
         *,
         user_id: int,
         confirmed: bool = False,
+        identity_verified: bool = False,
     ) -> CompanyAnalysisResponse:
         cleaned_name = " ".join(company_name.strip().split())
         if not cleaned_name:
@@ -185,6 +186,7 @@ class AnalysisService:
                 force_refresh=force_refresh,
                 user_id=user_id,
                 confirmed=confirmed,
+                identity_verified=identity_verified,
             )
 
         return await analyze_singleflight.do(f"analyze:{user_id}:{normalized}", _run)
@@ -196,6 +198,7 @@ class AnalysisService:
         force_refresh: bool = False,
         user_id: int,
         confirmed: bool = False,
+        identity_verified: bool = False,
     ) -> CompanyAnalysisResponse:
         started = time.perf_counter()
         logger.info(
@@ -230,9 +233,15 @@ class AnalysisService:
         if not profile:
             profile = empty_profile()
         profile = self.market_service.apply_to_profile(profile, market)
-        # Always validate company-ness. `confirmed` only skips resolve ambiguity,
-        # not person/given-name pages that slipped into autocomplete.
-        assert_valid_company(cleaned_name, profile=profile, market=market)
+        # Validate company-ness. When resolve already proved company-grade identity,
+        # allow through if Wikidata/Yahoo are rate-limited — but still reject
+        # explicit non-company profile hits (e.g. given-name pages).
+        assert_valid_company(
+            cleaned_name,
+            profile=profile,
+            market=market,
+            identity_verified=identity_verified,
+        )
 
         articles = await self.news_service.fetch_company_news(cleaned_name)
         logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
