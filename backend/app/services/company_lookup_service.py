@@ -262,9 +262,7 @@ class CompanyLookupService:
                 suggestions=[],
             )
 
-        candidates = self._collect_candidates(parts)
-        if not any(item.confidence >= SUGGEST_CONFIDENCE for item in candidates):
-            candidates = candidates + self._known_company_fallbacks(parts)
+        candidates = self._collect_candidates(parts) + self._known_company_fallbacks(parts)
         ranked = sorted(
             candidates,
             key=lambda item: (
@@ -664,6 +662,14 @@ class CompanyLookupService:
                         "format": "json",
                     },
                 )
+                if response.status_code in {403, 429} or response.status_code >= 500:
+                    logger.warning(
+                        "Wikipedia company lookup soft-fail status=%s query=%r term=%r",
+                        response.status_code,
+                        parts.raw,
+                        term,
+                    )
+                    continue
                 response.raise_for_status()
             except Exception:
                 logger.warning(
@@ -736,6 +742,14 @@ class CompanyLookupService:
                     "format": "json",
                 },
             )
+            if response.status_code in {403, 429} or response.status_code >= 500:
+                logger.warning(
+                    "Wikidata company lookup soft-fail status=%s query=%r term=%r",
+                    response.status_code,
+                    parts.raw,
+                    term,
+                )
+                return
             response.raise_for_status()
             for item in response.json().get("search") or []:
                 qid = str(item.get("id") or "")
@@ -1083,8 +1097,17 @@ class CompanyLookupService:
             return False
         if chosen.confidence < EXACT_CONFIDENCE:
             return False
+        if description_is_rejected(chosen.description):
+            return False
 
         if parts.is_ticker:
+            return True
+
+        # "Bain & Company" → normalize collapses to "bain", but the raw typed tokens
+        # still match the suggestion — treat as a full-name exact hit.
+        raw_tokens = tuple(re.findall(r"[a-z0-9]+", parts.raw.lower()))
+        label_tokens = tuple(re.findall(r"[a-z0-9]+", chosen.name.lower()))
+        if raw_tokens and raw_tokens == label_tokens:
             return True
 
         # Multi-word exact queries are unambiguous enough.
@@ -1112,8 +1135,6 @@ class CompanyLookupService:
                 host = re.sub(r"[^a-z0-9]", "", ((chosen.location or "").split(".")[0]).lower())
                 return len(parts.compact) >= 5 and host == parts.compact
             if chosen.source in {"wikidata", "yahoo", "wikipedia"}:
-                if description_is_rejected(chosen.description):
-                    return False
                 if len(parts.norm) < 4:
                     return False
                 if description_looks_like_company(chosen.description) or bool(chosen.ticker):
@@ -1123,7 +1144,9 @@ class CompanyLookupService:
             return False
 
         if kind == "brand_suffix":
-            if len(parts.norm) < 6:
+            # Short stems ("bain") stay in suggestion mode so Bain Capital can compete.
+            # Full legal names are handled above via raw token equality.
+            if len(parts.norm) < 6 and len(raw_tokens) < 2:
                 return False
             # Require a clear lead over non-exact rivals.
             rivals = [

@@ -110,6 +110,25 @@ def test_bain_known_fallback_private_firm() -> None:
         assert fallbacks[0].source == "wikipedia"
 
 
+def test_bain_and_company_auto_analyzes_full_name() -> None:
+    """normalize() strips 'company', but a full typed name should still auto-run."""
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    suggestion = CompanySuggestion(
+        name="Bain & Company",
+        description="Company · bain.com",
+        confidence=0.99,
+        source="clearbit",
+        location="bain.com",
+        match_kind="brand_suffix",
+    )
+    parts = service._query_parts("Bain & Company")
+    assert service._is_exact_match(parts, suggestion) is True
+    assert service._should_auto_analyze(parts, suggestion, [suggestion]) is True
+    # Short stem alone should stay in suggestion mode (Bain Capital, etc.).
+    short = service._query_parts("Bain")
+    assert service._should_auto_analyze(short, suggestion, [suggestion]) is False
+
+
 def test_siemens_known_fallback_uses_stemmed_key() -> None:
     service = CompanyLookupService.__new__(CompanyLookupService)
     fallbacks = service._known_company_fallbacks(service._query_parts("Siemens"))
