@@ -568,6 +568,29 @@ ol {
   width: min(640px, 100%);
   align-content: start;
   justify-items: stretch;
+  min-width: 0;
+}
+
+.page--home-split .hero {
+  max-width: none;
+  padding-bottom: 0.85rem;
+}
+
+.home-workspace {
+  margin-bottom: 1.5rem;
+  align-items: start;
+}
+
+.home-workspace .home-search-stage {
+  width: 100%;
+}
+
+.home-workspace .search-console {
+  width: 100%;
+}
+
+.home-workspace .workspace-aside {
+  z-index: 1;
 }
 
 .home-brief-ready-actions {
@@ -1247,8 +1270,85 @@ ol {
 }
 
 .workspace-aside--home {
-  position: static;
-  max-height: none;
+  /* Same sticky sidebar role as Insights; collapse only shortens content. */
+  width: 100%;
+}
+
+.library-collapse-toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: calc(var(--radius-sm) - 0.15rem);
+}
+
+.library-collapse-toggle:hover .library-collapse-copy h2 {
+  color: var(--signal-deep);
+}
+
+.library-collapse-toggle:focus-visible {
+  outline: 2px solid rgba(200, 30, 69, 0.35);
+  outline-offset: 3px;
+}
+
+.library-collapse-copy {
+  min-width: 0;
+}
+
+.library-collapse-copy .section-label,
+.library-collapse-copy h2,
+.library-collapse-copy .aside-lead {
+  pointer-events: none;
+}
+
+.library-collapse-end {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 0 0 auto;
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.library-collapse-chevron {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid var(--ink-soft);
+  border-bottom: 2px solid var(--ink-soft);
+  transform: rotate(-45deg);
+  transition: transform 0.18s var(--ease);
+  margin-top: 0.05rem;
+}
+
+.library-collapse-chevron.is-open {
+  transform: rotate(45deg);
+  margin-top: -0.1rem;
+}
+
+.workspace-aside--home.is-collapsed {
+  padding-bottom: 1.1rem;
+}
+
+.workspace-aside--home.is-collapsed .aside-head {
+  margin-bottom: 0;
+}
+
+.library-body {
+  display: grid;
+  gap: 0;
 }
 
 .aside-head {
