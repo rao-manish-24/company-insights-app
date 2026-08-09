@@ -327,7 +327,39 @@ class CompanyLookupService:
                 suggestions=[],
             )
 
+        cache_key = f"resolve:{cleaned.lower()}"
+        cached = lookup_cache.get(cache_key)
+        if isinstance(cached, dict):
+            restored = self._resolution_from_cache(cached)
+            if restored is not None:
+                logger.info("Resolve cache hit query=%r status=%s", cleaned, restored.status)
+                return restored
+
+        # Fast path: known stems + Clearbit only — skip Wiki/Yahoo when already exact.
+        fast: list[CompanySuggestion] = list(self._known_company_fallbacks(parts))
+        try:
+            fast.extend(self._clearbit_candidates(parts))
+        except Exception:
+            logger.warning("Resolve clearbit fast-path failed query=%r", cleaned, exc_info=True)
+        resolution = self._decide_resolution(cleaned, parts, fast, limit=limit)
+        if resolution.status == "exact":
+            self._cache_resolution(cache_key, resolution)
+            return resolution
+
+        # Full path for ambiguous / thin Clearbit (Wikipedia recovers SpaceXAI, etc.).
         candidates = self._collect_candidates(parts) + self._known_company_fallbacks(parts)
+        resolution = self._decide_resolution(cleaned, parts, candidates, limit=limit)
+        self._cache_resolution(cache_key, resolution)
+        return resolution
+
+    def _decide_resolution(
+        self,
+        cleaned: str,
+        parts: _QueryParts,
+        candidates: list[CompanySuggestion],
+        *,
+        limit: int,
+    ) -> CompanyResolution:
         ranked = sorted(
             candidates,
             key=lambda item: (
@@ -400,6 +432,44 @@ class CompanyLookupService:
             message=f'No valid companies found with this name: “{cleaned}”.',
             suggestions=[],
         )
+
+    def _cache_resolution(self, cache_key: str, resolution: CompanyResolution) -> None:
+        lookup_cache.set(
+            cache_key,
+            self.to_dict(resolution),
+            ttl_seconds=180,
+            stale_seconds=600,
+        )
+
+    def _resolution_from_cache(self, payload: dict[str, Any]) -> CompanyResolution | None:
+        try:
+            suggestions = [
+                CompanySuggestion(
+                    name=str(item.get("name") or ""),
+                    description=item.get("description"),
+                    confidence=float(item.get("confidence") or 0),
+                    source=str(item.get("source") or "cache"),
+                    ticker=item.get("ticker"),
+                    location=item.get("location"),
+                    match_kind=item.get("match_kind") or "none",
+                )
+                for item in (payload.get("suggestions") or [])
+                if isinstance(item, dict) and item.get("name")
+            ]
+            status = payload.get("status") or "not_found"
+            if status not in {"exact", "ambiguous", "not_found"}:
+                return None
+            return CompanyResolution(
+                query=str(payload.get("query") or ""),
+                status=status,
+                confidence=float(payload.get("confidence") or 0),
+                matched_name=payload.get("matched_name"),
+                message=str(payload.get("message") or ""),
+                suggestions=suggestions,
+            )
+        except Exception:
+            logger.warning("Corrupt resolve cache payload", exc_info=True)
+            return None
 
     def _query_parts(self, query: str) -> _QueryParts:
         norm = normalize_name(query)
@@ -1267,6 +1337,7 @@ class CompanyLookupService:
                     "source": item.source,
                     "ticker": item.ticker,
                     "location": item.location,
+                    "match_kind": item.match_kind,
                 }
                 for item in resolution.suggestions
             ],

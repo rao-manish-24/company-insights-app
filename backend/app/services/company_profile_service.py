@@ -122,25 +122,43 @@ class CompanyProfileService:
             label = ((entity.get("labels") or {}).get("en") or {}).get("value") or company_name
             description = ((entity.get("descriptions") or {}).get("en") or {}).get("value")
 
+            # Batch-resolve entity labels (HQ/parent/CEO/units) — one Wikidata call.
+            label_qids: list[str] = []
+            for prop in (P_HQ, P_PARENT, *(p for _, p in ROLE_PROPERTIES)):
+                qid = self._claim_entity_id(claims.get(prop))
+                if qid:
+                    label_qids.append(qid)
+            for prop in (P_REVENUE, P_OPERATING_INCOME, P_TOTAL_ASSETS, P_EMPLOYEES):
+                unit_qid = self._claim_unit_id(claims.get(prop))
+                if unit_qid and unit_qid != "1":
+                    label_qids.append(unit_qid)
+            labels = self._entity_labels_batch(label_qids)
+
             profile["founded"] = self._format_time_claim(claims.get(P_INCEPTION))
-            profile["headquarters"] = self._resolve_entity_claim(claims.get(P_HQ))
+            hq_qid = self._claim_entity_id(claims.get(P_HQ))
+            profile["headquarters"] = labels.get(hq_qid) if hq_qid else None
             profile["employees"] = self._format_quantity_claim(
-                claims.get(P_EMPLOYEES), unit_suffix=" employees"
+                claims.get(P_EMPLOYEES),
+                unit_suffix=" employees",
+                unit_labels=labels,
             )
-            profile["parent_company"] = self._resolve_entity_claim(claims.get(P_PARENT))
-            profile["revenue"] = self._format_quantity_claim(claims.get(P_REVENUE), money=True)
+            parent_qid = self._claim_entity_id(claims.get(P_PARENT))
+            profile["parent_company"] = labels.get(parent_qid) if parent_qid else None
+            profile["revenue"] = self._format_quantity_claim(
+                claims.get(P_REVENUE), money=True, unit_labels=labels
+            )
             profile["operating_income"] = self._format_quantity_claim(
-                claims.get(P_OPERATING_INCOME), money=True
+                claims.get(P_OPERATING_INCOME), money=True, unit_labels=labels
             )
             profile["total_assets"] = self._format_quantity_claim(
-                claims.get(P_TOTAL_ASSETS), money=True
+                claims.get(P_TOTAL_ASSETS), money=True, unit_labels=labels
             )
 
             people: dict[str, str | None] = {role: None for role in KEY_PEOPLE_ROLES}
             for role, prop in ROLE_PROPERTIES:
-                name = self._resolve_entity_claim(claims.get(prop))
-                if name:
-                    people[role] = name
+                person_qid = self._claim_entity_id(claims.get(prop))
+                if person_qid and labels.get(person_qid):
+                    people[role] = labels[person_qid]
 
             # Fill gaps from the English Wikipedia infobox (CFO/CBO/VP rarely on Wikidata).
             wiki_people, wiki_url = self._wikipedia_key_people(company_name, entity=entity)
@@ -540,6 +558,7 @@ class CompanyProfileService:
         *,
         money: bool = False,
         unit_suffix: str = "",
+        unit_labels: dict[str, str] | None = None,
     ) -> str | None:
         value = self._mainsnak_value(claim_list)
         if not isinstance(value, dict):
@@ -549,12 +568,11 @@ class CompanyProfileService:
         except ValueError:
             return None
 
-        unit_id = None
-        unit = value.get("unit") or ""
-        if unit.startswith("http://www.wikidata.org/entity/"):
-            unit_id = unit.rsplit("/", 1)[-1]
-
-        unit_label = self._entity_label(unit_id) if unit_id and unit_id != "1" else None
+        unit_id = self._claim_unit_id(claim_list)
+        if unit_labels is not None:
+            unit_label = unit_labels.get(unit_id) if unit_id and unit_id != "1" else None
+        else:
+            unit_label = self._entity_label(unit_id) if unit_id and unit_id != "1" else None
         pretty = self._human_number(amount)
 
         if money:
@@ -576,32 +594,64 @@ class CompanyProfileService:
             return f"{pretty} {unit_label}"
         return pretty
 
-    def _resolve_entity_claim(self, claim_list: list[dict[str, Any]] | None) -> str | None:
+    def _claim_entity_id(self, claim_list: list[dict[str, Any]] | None) -> str | None:
         value = self._mainsnak_value(claim_list)
         if not isinstance(value, dict):
             return None
         qid = value.get("id")
+        return str(qid) if qid else None
+
+    def _claim_unit_id(self, claim_list: list[dict[str, Any]] | None) -> str | None:
+        value = self._mainsnak_value(claim_list)
+        if not isinstance(value, dict):
+            return None
+        unit = value.get("unit") or ""
+        if unit.startswith("http://www.wikidata.org/entity/"):
+            return unit.rsplit("/", 1)[-1]
+        return None
+
+    def _resolve_entity_claim(self, claim_list: list[dict[str, Any]] | None) -> str | None:
+        qid = self._claim_entity_id(claim_list)
         if not qid:
             return None
         return self._entity_label(qid)
 
-    def _entity_label(self, qid: str | None) -> str | None:
-        if not qid:
-            return None
+    def _entity_labels_batch(self, qids: list[str]) -> dict[str, str]:
+        unique = []
+        seen: set[str] = set()
+        for qid in qids:
+            if not qid or qid in seen:
+                continue
+            seen.add(qid)
+            unique.append(qid)
+        if not unique:
+            return {}
         payload = self._get_json(
             WIKIDATA_API,
             params={
                 "action": "wbgetentities",
-                "ids": qid,
+                "ids": "|".join(unique),
                 "props": "labels",
                 "languages": "en",
                 "format": "json",
             },
         )
         if not payload:
+            return {}
+        out: dict[str, str] = {}
+        for qid, entity in (payload.get("entities") or {}).items():
+            if not isinstance(entity, dict):
+                continue
+            label = ((entity.get("labels") or {}).get("en") or {}).get("value")
+            if label:
+                out[str(qid)] = str(label)
+        return out
+
+    def _entity_label(self, qid: str | None) -> str | None:
+        if not qid:
             return None
-        entity = (payload.get("entities") or {}).get(qid) or {}
-        return ((entity.get("labels") or {}).get("en") or {}).get("value")
+        batched = self._entity_labels_batch([qid])
+        return batched.get(qid)
 
     @staticmethod
     def _human_number(amount: float) -> str:

@@ -238,13 +238,18 @@ class AnalysisService:
         normalized = normalize_company_name(cleaned_name)
 
         async def _fetch_upstream() -> tuple[dict, dict, list, dict]:
-            profile, market = await asyncio.gather(
-                asyncio.to_thread(self.profile_service.fetch_profile, cleaned_name),
-                asyncio.to_thread(
-                    self.market_service.fetch_market,
-                    cleaned_name,
-                    ticker=ticker,
-                ),
+            # Overlap NewsAPI with Wikidata/Yahoo — news only needs the company name.
+            profile_task = asyncio.to_thread(self.profile_service.fetch_profile, cleaned_name)
+            market_task = asyncio.to_thread(
+                self.market_service.fetch_market,
+                cleaned_name,
+                ticker=ticker,
+            )
+            news_task = self.news_service.fetch_company_news(cleaned_name)
+            profile, market, articles = await asyncio.gather(
+                profile_task,
+                market_task,
+                news_task,
             )
             if not profile:
                 profile = empty_profile()
@@ -255,7 +260,6 @@ class AnalysisService:
                 market=market,
                 identity_verified=identity_verified,
             )
-            articles = await self.news_service.fetch_company_news(cleaned_name)
             logger.info("News fetched company=%r article_count=%s", cleaned_name, len(articles))
             insights = await asyncio.to_thread(
                 self.insights_agent.analyze,

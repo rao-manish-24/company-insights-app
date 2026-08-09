@@ -31,6 +31,36 @@ import { useAuth } from './useAuth'
 const HISTORY_LIMIT = 15
 const AUTOCOMPLETE_DEBOUNCE_MS = 280
 
+/** Strong autocomplete hit that can skip a full /resolve round-trip. */
+function strongAutocompleteMatch(
+  query: string,
+  items: CompanySuggestion[],
+): CompanySuggestion | null {
+  const raw = query.trim().toLowerCase()
+  if (!raw || items.length === 0) return null
+  const qTokens = raw.replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean)
+  for (const item of items) {
+    if (item.confidence < 0.92) continue
+    const name = item.name.trim().toLowerCase()
+    const nameTokens = name.replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean)
+    // Full typed name matches suggestion tokens (Bain & Company).
+    if (qTokens.length >= 2 && qTokens.join(' ') === nameTokens.join(' ')) {
+      return item
+    }
+    if (name === raw) return item
+    // Long single-token brand with high confidence (Microsoft → Microsoft Corporation).
+    if (
+      qTokens.length === 1 &&
+      qTokens[0].length >= 5 &&
+      nameTokens[0] === qTokens[0] &&
+      item.confidence >= 0.97
+    ) {
+      return item
+    }
+  }
+  return null
+}
+
 export type RunAnalysisResult =
   | 'analyzed'
   | 'suggestions'
@@ -261,7 +291,8 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
         totalTokens: result.total_tokens ?? null,
         cached: Boolean(result.cached),
       })
-      await loadHistory()
+      // Don't block "brief ready" on a second history RTT.
+      void loadHistory()
       return 'analyzed'
     },
     [loadHistory, clearAutocomplete],
@@ -322,7 +353,21 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
         let target = trimmed
         let resolvedExact = Boolean(options?.skipResolve && options?.confirmed)
         let tickerHint = options?.ticker ?? null
+        let confirmed = Boolean(options?.confirmed)
+
+        // Reuse live autocomplete when it already has a high-confidence exact brand.
         if (!options?.skipResolve) {
+          const fromAutocomplete = strongAutocompleteMatch(trimmed, autocomplete)
+          if (fromAutocomplete) {
+            target = fromAutocomplete.name
+            resolvedExact = true
+            confirmed = true
+            tickerHint = fromAutocomplete.ticker ?? null
+            setQueryState(target)
+          }
+        }
+
+        if (!options?.skipResolve && !resolvedExact) {
           const resolution = await resolveCompany(trimmed, { signal })
           if (requestId !== requestIdRef.current) return 'aborted'
 
@@ -358,7 +403,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
         }
 
         return await executeAnalyze(target, forceRefresh, requestId, {
-          confirmed: Boolean(options?.confirmed),
+          confirmed,
           resolved: resolvedExact,
           ticker: tickerHint,
           signal,
@@ -392,6 +437,7 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
       executeAnalyze,
       clearAutocomplete,
       beginRequest,
+      autocomplete,
     ],
   )
 

@@ -110,7 +110,14 @@ class MarketDataService:
 
         try:
             hint = (ticker or "").strip().upper() or None
-            resolved = hint if hint and self._chart_meta(hint) else None
+            if hint:
+                ticker_cached = market_cache.get(f"market:ticker:{hint}")
+                if isinstance(ticker_cached, dict):
+                    logger.info("Yahoo Finance ticker cache hit ticker=%s", hint)
+                    return self._store_market(cache_key, copy.deepcopy(ticker_cached))
+
+            chart_hint = self._chart_meta(hint) if hint else None
+            resolved = hint if hint and chart_hint else None
             ticker = resolved or self._resolve_ticker(cleaned)
             if not ticker:
                 logger.info("Yahoo Finance: no ticker for company=%r", cleaned)
@@ -120,7 +127,12 @@ class MarketDataService:
                     return copy.deepcopy(stale)
                 return market
 
-            info = self._fetch_info_bundle(ticker)
+            # With a validated ticker hint, chart-first avoids slow yfinance .info.
+            info = self._fetch_info_bundle(
+                ticker,
+                light=bool(resolved),
+                chart=chart_hint if resolved else None,
+            )
             currency = (info.get("currency") if info else None) or "USD"
             price = None
             previous = None
@@ -182,7 +194,15 @@ class MarketDataService:
                 market["price"],
                 market["market_cap"],
             )
-            return self._store_market(cache_key, market)
+            stored = self._store_market(cache_key, market)
+            if market.get("ticker"):
+                market_cache.set(
+                    f"market:ticker:{str(market['ticker']).upper()}",
+                    copy.deepcopy(market),
+                    max(60, get_settings().upstream_cache_minutes * 60),
+                    stale_seconds=max(60, get_settings().upstream_cache_minutes * 60) * 3,
+                )
+            return stored
         except Exception:
             logger.exception("Yahoo Finance fetch failed company=%r", cleaned)
             stale = market_cache.get(cache_key, allow_stale=True)
@@ -330,33 +350,45 @@ class MarketDataService:
             logger.warning("Yahoo search failed company=%r", company_name, exc_info=True)
             return []
 
-    def _fetch_info_bundle(self, ticker: str) -> dict[str, Any]:
-        info = self._fetch_yfinance_info(ticker)
-        chart = self._chart_meta(ticker) or {}
+    def _fetch_info_bundle(
+        self,
+        ticker: str,
+        *,
+        light: bool = False,
+        chart: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        chart_meta = chart if chart is not None else (self._chart_meta(ticker) or {})
+        # Light path: chart snapshot is enough for partner briefs when ticker is known.
+        if light and chart_meta.get("regularMarketPrice") is not None:
+            info: dict[str, Any] | None = None
+        else:
+            info = self._fetch_yfinance_info(ticker)
 
-        if not info and not chart:
+        if not info and not chart_meta:
             return {}
 
         merged: dict[str, Any] = dict(info or {})
-        # Chart fills price gaps when .info is rate-limited.
-        if chart.get("regularMarketPrice") is not None and not merged.get("regularMarketPrice"):
-            merged["regularMarketPrice"] = chart.get("regularMarketPrice")
-        if chart.get("previousClose") is not None and not merged.get("previousClose"):
-            merged["previousClose"] = chart.get("previousClose")
-        if chart.get("chartPreviousClose") is not None and not merged.get("previousClose"):
-            merged["previousClose"] = chart.get("chartPreviousClose")
-        if chart.get("currency") and not merged.get("currency"):
-            merged["currency"] = chart.get("currency")
-        if chart.get("exchangeName") and not merged.get("fullExchangeName"):
-            merged["fullExchangeName"] = chart.get("exchangeName")
-        if chart.get("shortName") and not merged.get("shortName"):
-            merged["shortName"] = chart.get("shortName")
-        if chart.get("fiftyTwoWeekHigh") is not None and not merged.get("fiftyTwoWeekHigh"):
-            merged["fiftyTwoWeekHigh"] = chart.get("fiftyTwoWeekHigh")
-        if chart.get("fiftyTwoWeekLow") is not None and not merged.get("fiftyTwoWeekLow"):
-            merged["fiftyTwoWeekLow"] = chart.get("fiftyTwoWeekLow")
-        if chart.get("regularMarketVolume") is not None and not merged.get("regularMarketVolume"):
-            merged["regularMarketVolume"] = chart.get("regularMarketVolume")
+        # Chart fills price gaps when .info is rate-limited / skipped.
+        if chart_meta.get("regularMarketPrice") is not None and not merged.get("regularMarketPrice"):
+            merged["regularMarketPrice"] = chart_meta.get("regularMarketPrice")
+        if chart_meta.get("previousClose") is not None and not merged.get("previousClose"):
+            merged["previousClose"] = chart_meta.get("previousClose")
+        if chart_meta.get("chartPreviousClose") is not None and not merged.get("previousClose"):
+            merged["previousClose"] = chart_meta.get("chartPreviousClose")
+        if chart_meta.get("currency") and not merged.get("currency"):
+            merged["currency"] = chart_meta.get("currency")
+        if chart_meta.get("exchangeName") and not merged.get("fullExchangeName"):
+            merged["fullExchangeName"] = chart_meta.get("exchangeName")
+        if chart_meta.get("shortName") and not merged.get("shortName"):
+            merged["shortName"] = chart_meta.get("shortName")
+        if chart_meta.get("fiftyTwoWeekHigh") is not None and not merged.get("fiftyTwoWeekHigh"):
+            merged["fiftyTwoWeekHigh"] = chart_meta.get("fiftyTwoWeekHigh")
+        if chart_meta.get("fiftyTwoWeekLow") is not None and not merged.get("fiftyTwoWeekLow"):
+            merged["fiftyTwoWeekLow"] = chart_meta.get("fiftyTwoWeekLow")
+        if chart_meta.get("regularMarketVolume") is not None and not merged.get(
+            "regularMarketVolume"
+        ):
+            merged["regularMarketVolume"] = chart_meta.get("regularMarketVolume")
         return merged
 
     def _fetch_yfinance_info(self, ticker: str) -> dict[str, Any] | None:

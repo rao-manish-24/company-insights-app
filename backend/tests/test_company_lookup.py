@@ -110,6 +110,34 @@ def test_bain_known_fallback_private_firm() -> None:
         assert fallbacks[0].source == "wikipedia"
 
 
+def test_resolve_fast_path_exact_without_full_collect() -> None:
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    service._clearbit_candidates = lambda parts: [  # type: ignore[method-assign]
+        CompanySuggestion(
+            name="Microsoft Corporation",
+            description="Company · microsoft.com",
+            confidence=0.99,
+            source="clearbit",
+            location="microsoft.com",
+            match_kind="brand_suffix",
+        )
+    ]
+    called = {"full": False}
+
+    def _boom(parts):  # type: ignore[no-untyped-def]
+        called["full"] = True
+        return []
+
+    service._collect_candidates = _boom  # type: ignore[method-assign]
+    from app.core.rate_limit import lookup_cache
+
+    lookup_cache._store.clear()  # noqa: SLF001
+    resolution = service.resolve("Microsoft")
+    assert resolution.status == "exact"
+    assert resolution.matched_name == "Microsoft Corporation"
+    assert called["full"] is False
+
+
 def test_quick_verify_accepts_known_bain() -> None:
     service = CompanyLookupService.__new__(CompanyLookupService)
     # Avoid network — only known stems.
