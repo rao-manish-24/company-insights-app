@@ -283,29 +283,31 @@ class MarketDataService:
                 seen_symbols.add(symbol)
                 quotes.append(quote)
 
-        preferred_types = {"EQUITY"}
-        ranked = [
-            quote
-            for quote in quotes
-            if quote.get("symbol") and (quote.get("quoteType") or "").upper() in preferred_types
-        ]
-        if not ranked:
-            ranked = [
-                quote
-                for quote in quotes
-                if quote.get("symbol") and (quote.get("quoteType") or "").upper() == "ETF"
-            ]
-        if not ranked:
-            ranked = [quote for quote in quotes if quote.get("symbol")]
+        equities: list[dict[str, Any]] = []
+        others: list[dict[str, Any]] = []
+        for quote in quotes:
+            if not quote.get("symbol"):
+                continue
+            if (quote.get("quoteType") or "").upper() == "EQUITY":
+                equities.append(quote)
+            else:
+                others.append(quote)
 
         exact: list[dict[str, Any]] = []
         aligned: list[dict[str, Any]] = []
-        for quote in ranked:
+        # A symbol typed directly may match any instrument, including a fund.
+        for quote in equities + others:
             symbol = str(quote.get("symbol") or "").upper()
-            long_name = quote.get("longname") or quote.get("shortname") or ""
             if compact and compact == symbol.replace(" ", ""):
                 exact.append(quote)
+        # A company name may only match an equity. Funds and ETFs are named after
+        # their sponsor ("Fidelity Investment Grade Bond ETF"), so matching them by
+        # name hands a private firm the ticker of its own fund.
+        for quote in equities:
+            symbol = str(quote.get("symbol") or "").upper()
+            if compact and compact == symbol.replace(" ", ""):
                 continue
+            long_name = quote.get("longname") or quote.get("shortname") or ""
             if names_align(company_name, str(long_name)):
                 # Prefer primary US listings (AAPL) over foreign duals (APC.DE, AAPL34.SA).
                 aligned.append(quote)
@@ -373,9 +375,12 @@ class MarketDataService:
         chart: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         chart_meta = chart if chart is not None else (self._chart_meta(ticker) or {})
-        # Light path: chart snapshot is enough for partner briefs when ticker is known.
+        # Light path: ticker already validated, so skip the slow .info round trip and
+        # take the cheaper fast_info instead. The chart alone has no market cap, which
+        # leaves the snapshot showing a price with no sense of the company's scale.
+        # No fallback the other way: once .info is throttled, fast_info raises too.
         if light and chart_meta.get("regularMarketPrice") is not None:
-            info: dict[str, Any] | None = None
+            info: dict[str, Any] | None = self._fetch_yfinance_fast_info(ticker) or None
         else:
             info = self._fetch_yfinance_info(ticker)
 
@@ -430,6 +435,36 @@ class MarketDataService:
                 return None
             logger.warning("yfinance .info failed ticker=%s", ticker, exc_info=True)
             return None
+
+    # fast_info keys → the .info keys the rest of this service already reads.
+    _FAST_INFO_FIELDS: tuple[tuple[str, str], ...] = (
+        ("regularMarketPrice", "lastPrice"),
+        ("previousClose", "previousClose"),
+        ("marketCap", "marketCap"),
+        ("currency", "currency"),
+        ("exchange", "exchange"),
+        ("regularMarketVolume", "lastVolume"),
+        ("fiftyTwoWeekHigh", "fiftyTwoWeekHigh"),
+        ("fiftyTwoWeekLow", "fiftyTwoWeekLow"),
+    )
+
+    def _fetch_yfinance_fast_info(self, ticker: str) -> dict[str, Any]:
+        bundle: dict[str, Any] = {}
+        # Every read is lazy, so any key can raise once Yahoo throttles the process.
+        try:
+            fast = yf.Ticker(ticker).fast_info
+            for target, source in self._FAST_INFO_FIELDS:
+                value = fast.get(source)
+                if value is not None:
+                    bundle[target] = value
+        except Exception as exc:
+            if "rate" in str(exc).lower() or "too many" in str(exc).lower():
+                logger.warning("yfinance fast_info rate-limited ticker=%s", ticker)
+            else:
+                logger.warning("yfinance fast_info failed ticker=%s", ticker, exc_info=True)
+            return bundle
+        logger.info("yfinance fast_info ticker=%s fields=%s", ticker, len(bundle))
+        return bundle
 
     def _chart_meta(self, ticker: str) -> dict[str, Any] | None:
         try:

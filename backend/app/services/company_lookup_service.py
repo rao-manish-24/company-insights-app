@@ -158,6 +158,11 @@ _CURATED_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str] | tuple[str, str,
     ("kearney",): ("Kearney", "", "Management consulting firm"),
     ("spacex",): ("SpaceX", "", "Aerospace manufacturer and spaceflight company"),
     ("openai",): ("OpenAI", "", "Artificial intelligence research company"),
+    # Privately held asset managers. Yahoo search returns their own funds, so a
+    # name match would report a bond ETF's price as the firm's share price.
+    ("fidelity", "investment"): ("Fidelity Investments", "", "Financial services firm"),
+    ("vanguard",): ("The Vanguard Group", "", "Investment management company"),
+    ("fmr",): ("Fidelity Investments", "", "Financial services firm"),
 }
 
 
