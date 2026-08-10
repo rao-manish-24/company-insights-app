@@ -130,7 +130,7 @@ Minimum variables (see `.env.example` for the full list):
 4. Set `CORS_ORIGINS` to your static site URL  
 5. Set `VITE_API_BASE_URL=https://<api-host>/api` on the web service and redeploy  
 
-More detail: [`docs/DEPLOY.md`](./docs/DEPLOY.md) · [`README.detailed.md`](./README.detailed.md)
+
 
 ---
 
@@ -139,13 +139,9 @@ More detail: [`docs/DEPLOY.md`](./docs/DEPLOY.md) · [`README.detailed.md`](./RE
 ```text
 backend/      FastAPI, services, tests, Dockerfile
 frontend/     React SPA + nginx Dockerfile
-docs/         Deploy notes and assessment write-ups
 docker-compose.yml
 render.yaml
 ```
 
 ---
 
-## License
-
-Prototype for evaluation. Third-party APIs are subject to their own terms and free-tier limits. Never commit `.env` or secrets.
