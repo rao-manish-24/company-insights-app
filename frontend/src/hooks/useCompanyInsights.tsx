@@ -443,27 +443,24 @@ export function CompanyInsightsProvider({ children }: { children: ReactNode }) {
 
   const updateQuery = useCallback(
     (value: string) => {
-      const apply = () => {
-        autocompleteLiveRef.current = true
-        setQueryState(value)
-        setError(null)
-        if (suggestions.length > 0) {
-          setSuggestions([])
-          setSuggestionMessage(null)
-        }
+      // Always reflect keystrokes immediately. Booting a private session (or
+      // validating a token after hard refresh) can take seconds on a cold API —
+      // that must not gate the controlled input, or typing appears broken.
+      autocompleteLiveRef.current = true
+      setQueryState(value)
+      setError(null)
+      if (suggestions.length > 0) {
+        setSuggestions([])
+        setSuggestionMessage(null)
       }
       if (!user) {
-        void continuePrivately()
-          .then(apply)
-          .catch(() =>
-            openAuth({
-              mode: 'signin',
-              message: 'Start a private session or sign in to search companies.',
-            }),
-          )
-        return
+        void continuePrivately().catch(() =>
+          openAuth({
+            mode: 'signin',
+            message: 'Start a private session or sign in to search companies.',
+          }),
+        )
       }
-      apply()
     },
     [suggestions.length, user, openAuth, continuePrivately],
   )
