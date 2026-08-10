@@ -155,19 +155,13 @@ Return JSON with this exact shape:
   ],
   "conversation_starters": [
     "sharp question or talking point a partner can use in the first 10 minutes"
-  ],
-  "leadership_fill": {{
-    "CFO": "current CFO full name or null if uncertain",
-    "CBO": "current chief business officer full name or null if uncertain",
-    "Vice President": "a notable current VP relevant to clients, or null if uncertain"
-  }}
+  ]
 }}
 
 Constraints:
 - Include 3-5 key_themes, 2-4 opportunities, 2-4 risks, 3-5 recommendations, 3-5 conversation_starters.
 - Be specific to {company_name}.
 - For every opportunity, risk, and recommendation, include 1-3 `sources` that cite the news corpus using article numbers/titles from above.
-- For leadership_fill: ONLY fill names you are confident are current; otherwise use null. Do not invent.
 """
 
 EXPAND_SYSTEM_PROMPT = """You are Company Insights Dig-Deeper Agent, a specialist subagent that \

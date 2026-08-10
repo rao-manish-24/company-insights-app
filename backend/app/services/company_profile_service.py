@@ -23,7 +23,6 @@ P_HQ = "P159"
 P_EMPLOYEES = "P1128"
 P_PARENT = "P749"
 P_CEO = "P169"
-P_COO = "P1789"
 P_CHAIR = "P488"
 P_REVENUE = "P2139"
 P_OPERATING_INCOME = "P3362"
@@ -31,10 +30,11 @@ P_TOTAL_ASSETS = "P2403"
 
 ROLE_PROPERTIES: list[tuple[str, str]] = [
     ("CEO", P_CEO),
-    ("COO", P_COO),
 ]
 
-KEY_PEOPLE_ROLES = ("CEO", "COO", "CFO", "CBO", "Vice President")
+# Only the CEO is shown. Other officers are inconsistently recorded upstream, so
+# they were mostly rendering as "Not available" and adding noise to the brief.
+KEY_PEOPLE_ROLES = ("CEO",)
 
 # Map Wikipedia role phrases → our UI roles (order matters: more specific first).
 _WIKI_ROLE_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
@@ -163,7 +163,7 @@ class CompanyProfileService:
                 if person_qid and labels.get(person_qid):
                     people[role] = labels[person_qid]
 
-            # Fill gaps from the English Wikipedia infobox (CFO/CBO/VP rarely on Wikidata).
+            # Fill gaps from the English Wikipedia infobox when Wikidata has no CEO claim.
             wiki_people, wiki_url = self._wikipedia_key_people(company_name, entity=entity)
             wiki_filled = False
             for role in KEY_PEOPLE_ROLES:

@@ -1884,7 +1884,7 @@ ol {
 
 .leadership-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 280px);
   gap: 0.55rem;
 }
 
@@ -3005,11 +3005,5 @@ ol {
 
   .dossier-cell:nth-child(5) {
     grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 1100px) and (min-width: 821px) {
-  .leadership-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

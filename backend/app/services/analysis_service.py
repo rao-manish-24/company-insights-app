@@ -31,34 +31,6 @@ from app.services.news_service import NewsService
 logger = logging.getLogger(__name__)
 
 
-def _merge_leadership(profile: dict, leadership_fill: dict | None) -> dict:
-    if not isinstance(leadership_fill, dict):
-        return profile
-    people = list(profile.get("key_people") or [])
-    by_role = {
-        str(item.get("role")): item
-        for item in people
-        if isinstance(item, dict) and item.get("role")
-    }
-    for role in ("CFO", "CBO", "Vice President"):
-        fill = leadership_fill.get(role)
-        if not fill or not isinstance(fill, str):
-            continue
-        name = fill.strip()
-        if not name or name.lower() in {"null", "none", "unknown", "n/a"}:
-            continue
-        existing = by_role.get(role)
-        if existing and existing.get("name"):
-            continue
-        by_role[role] = {"role": role, "name": name}
-    # Preserve stable order
-    ordered_roles = ["CEO", "COO", "CFO", "CBO", "Vice President"]
-    profile["key_people"] = [
-        by_role.get(role) or {"role": role, "name": None} for role in ordered_roles
-    ]
-    return profile
-
-
 def _cached_response(row: CompanyAnalysis) -> CompanyAnalysisResponse:
     return CompanyAnalysisResponse.model_validate(row, from_attributes=True).model_copy(
         update={
@@ -293,8 +265,6 @@ class AnalysisService:
         usage_raw = insights.pop("_usage", None)
         usage = usage_raw if isinstance(usage_raw, dict) else {}
         model_name = "fallback-heuristic" if used_fallback else self.settings.llm_model
-        leadership_fill = insights.pop("leadership_fill", None)
-        profile = _merge_leadership(profile, leadership_fill)
 
         prompt_tokens = int(usage.get("prompt_tokens") or 0)
         completion_tokens = int(usage.get("completion_tokens") or 0)
