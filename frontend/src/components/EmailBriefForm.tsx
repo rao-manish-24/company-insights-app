@@ -33,15 +33,16 @@ export function EmailBriefForm({ analysisId }: Props) {
         <h2>Send to inbox</h2>
       </div>
       <p className="email-hint">
-        Send this brief to your inbox before the meeting. Leave blank to use the default address
-        configured on the server.
+        Send this brief to your inbox before the meeting. Emails can only be sent to
+        manishraoh1998@gmail.com, which is the configured email address. Leave blank to use that
+        default.
       </p>
       <form className="email-row" onSubmit={onSubmit}>
         <input
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="Leave blank for default address, or type an email"
+          placeholder="Leave blank for manishraoh1998@gmail.com"
           aria-label="Email address for this brief"
           disabled={sending}
         />
