@@ -1,0 +1,3502 @@
+[
+  {
+    "company": "Walmart",
+    "industry": "General Merchandisers",
+    "csv_ticker": "WMT",
+    "ticker": "WMT",
+    "state": "ok"
+  },
+  {
+    "company": "Amazon.com",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "AMZN",
+    "ticker": "AMZN",
+    "state": "ok"
+  },
+  {
+    "company": "Exxon Mobil",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "XOM",
+    "ticker": "XOM",
+    "state": "ok"
+  },
+  {
+    "company": "Apple",
+    "industry": "Computers, Office Equipment",
+    "csv_ticker": "AAPL",
+    "ticker": "AAPL",
+    "state": "ok"
+  },
+  {
+    "company": "UnitedHealth Group",
+    "industry": "Health Care: Insurance and Managed Care",
+    "csv_ticker": "UNH",
+    "ticker": "UNH",
+    "state": "ok"
+  },
+  {
+    "company": "CVS Health",
+    "industry": "Health Care: Pharmacy and Other Services",
+    "csv_ticker": "CVS",
+    "ticker": "CVS",
+    "state": "ok"
+  },
+  {
+    "company": "Berkshire Hathaway",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "BRKA",
+    "ticker": "BRK-B",
+    "state": "fixed"
+  },
+  {
+    "company": "Alphabet",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "GOOGL",
+    "ticker": "GOOGL",
+    "state": "ok"
+  },
+  {
+    "company": "McKesson",
+    "industry": "Wholesalers: Health Care",
+    "csv_ticker": "MCK",
+    "ticker": "MCK",
+    "state": "ok"
+  },
+  {
+    "company": "Chevron",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "CVX",
+    "ticker": "CVX",
+    "state": "ok"
+  },
+  {
+    "company": "AmerisourceBergen",
+    "industry": "Wholesalers: Health Care",
+    "csv_ticker": "ABC",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Costco Wholesale",
+    "industry": "General Merchandisers",
+    "csv_ticker": "COST",
+    "ticker": "COST",
+    "state": "ok"
+  },
+  {
+    "company": "Microsoft",
+    "industry": "Computer Software",
+    "csv_ticker": "MSFT",
+    "ticker": "MSFT",
+    "state": "ok"
+  },
+  {
+    "company": "Cardinal Health",
+    "industry": "Wholesalers: Health Care",
+    "csv_ticker": "CAH",
+    "ticker": "CAH",
+    "state": "ok"
+  },
+  {
+    "company": "Cigna Group",
+    "industry": "Health Care: Pharmacy and Other Services",
+    "csv_ticker": "CI",
+    "ticker": "CI",
+    "state": "ok"
+  },
+  {
+    "company": "Marathon Petroleum",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "MPC",
+    "ticker": "MPC",
+    "state": "ok"
+  },
+  {
+    "company": "Phillips 66",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "PSX",
+    "ticker": "PSX",
+    "state": "ok"
+  },
+  {
+    "company": "Valero Energy",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "VLO",
+    "ticker": "VLO",
+    "state": "ok"
+  },
+  {
+    "company": "Ford Motor",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "F",
+    "ticker": "F",
+    "state": "ok"
+  },
+  {
+    "company": "Home Depot",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "HD",
+    "ticker": "HD",
+    "state": "ok"
+  },
+  {
+    "company": "General Motors",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "GM",
+    "ticker": "GM",
+    "state": "ok"
+  },
+  {
+    "company": "Elevance Health",
+    "industry": "Health Care: Insurance and Managed Care",
+    "csv_ticker": "ELV",
+    "ticker": "ELV",
+    "state": "ok"
+  },
+  {
+    "company": "JPMorgan Chase",
+    "industry": "Commercial Banks",
+    "csv_ticker": "JPM",
+    "ticker": "JPM",
+    "state": "ok"
+  },
+  {
+    "company": "Kroger",
+    "industry": "Food and Drug Stores",
+    "csv_ticker": "KR",
+    "ticker": "KR",
+    "state": "ok"
+  },
+  {
+    "company": "Centene",
+    "industry": "Health Care: Insurance and Managed Care",
+    "csv_ticker": "CNC",
+    "ticker": "CNC",
+    "state": "ok"
+  },
+  {
+    "company": "Verizon Communications",
+    "industry": "Telecommunications",
+    "csv_ticker": "VZ",
+    "ticker": "VZ",
+    "state": "ok"
+  },
+  {
+    "company": "Walgreens Boots Alliance",
+    "industry": "Food and Drug Stores",
+    "csv_ticker": "WBA",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Fannie Mae",
+    "industry": "Diversified Financials",
+    "csv_ticker": "FNMA",
+    "ticker": "FNMA",
+    "state": "ok"
+  },
+  {
+    "company": "Comcast",
+    "industry": "Telecommunications",
+    "csv_ticker": "CMCSA",
+    "ticker": "CMCSA",
+    "state": "ok"
+  },
+  {
+    "company": "AT&T",
+    "industry": "Telecommunications",
+    "csv_ticker": "T",
+    "ticker": "T",
+    "state": "ok"
+  },
+  {
+    "company": "Meta Platforms",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "META",
+    "ticker": "META",
+    "state": "ok"
+  },
+  {
+    "company": "Bank of America",
+    "industry": "Commercial Banks",
+    "csv_ticker": "BAC",
+    "ticker": "BAC",
+    "state": "ok"
+  },
+  {
+    "company": "Target",
+    "industry": "General Merchandisers",
+    "csv_ticker": "TGT",
+    "ticker": "TGT",
+    "state": "ok"
+  },
+  {
+    "company": "Dell Technologies",
+    "industry": "Computers, Office Equipment",
+    "csv_ticker": "DELL",
+    "ticker": "DELL",
+    "state": "ok"
+  },
+  {
+    "company": "Archer Daniels Midland",
+    "industry": "Food Production",
+    "csv_ticker": "ADM",
+    "ticker": "ADM",
+    "state": "ok"
+  },
+  {
+    "company": "Citigroup",
+    "industry": "Commercial Banks",
+    "csv_ticker": "C",
+    "ticker": "C",
+    "state": "ok"
+  },
+  {
+    "company": "United Parcel Service",
+    "industry": "Mail, Package and Freight Delivery",
+    "csv_ticker": "UPS",
+    "ticker": "UPS",
+    "state": "ok"
+  },
+  {
+    "company": "Pfizer",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "PFE",
+    "ticker": "PFE",
+    "state": "ok"
+  },
+  {
+    "company": "Lowe's",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "LOW",
+    "ticker": "LOW",
+    "state": "ok"
+  },
+  {
+    "company": "Johnson & Johnson",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "JNJ",
+    "ticker": "JNJ",
+    "state": "ok"
+  },
+  {
+    "company": "FedEx",
+    "industry": "Mail, Package and Freight Delivery",
+    "csv_ticker": "FDX",
+    "ticker": "FDX",
+    "state": "ok"
+  },
+  {
+    "company": "Humana",
+    "industry": "Health Care: Insurance and Managed Care",
+    "csv_ticker": "HUM",
+    "ticker": "HUM",
+    "state": "ok"
+  },
+  {
+    "company": "Energy Transfer",
+    "industry": "Pipelines",
+    "csv_ticker": "ET",
+    "ticker": "ET",
+    "state": "ok"
+  },
+  {
+    "company": "State Farm Insurance",
+    "industry": "Insurance: Property and Casualty (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Freddie Mac",
+    "industry": "Diversified Financials",
+    "csv_ticker": "FMCC",
+    "ticker": "FMCC",
+    "state": "ok"
+  },
+  {
+    "company": "PepsiCo",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "PEP",
+    "ticker": "PEP",
+    "state": "ok"
+  },
+  {
+    "company": "Wells Fargo",
+    "industry": "Commercial Banks",
+    "csv_ticker": "WFC",
+    "ticker": "WFC",
+    "state": "ok"
+  },
+  {
+    "company": "Walt Disney",
+    "industry": "Entertainment",
+    "csv_ticker": "DIS",
+    "ticker": "DIS",
+    "state": "ok"
+  },
+  {
+    "company": "ConocoPhillips",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "COP",
+    "ticker": "COP",
+    "state": "ok"
+  },
+  {
+    "company": "Tesla",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "TSLA",
+    "ticker": "TSLA",
+    "state": "ok"
+  },
+  {
+    "company": "Procter & Gamble",
+    "industry": "Household and Personal Products",
+    "csv_ticker": "PG",
+    "ticker": "PG",
+    "state": "ok"
+  },
+  {
+    "company": "General Electric",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "GE",
+    "ticker": "GE",
+    "state": "ok"
+  },
+  {
+    "company": "Albertsons",
+    "industry": "Food and Drug Stores",
+    "csv_ticker": "ACI",
+    "ticker": "ACI",
+    "state": "ok"
+  },
+  {
+    "company": "MetLife",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "MET",
+    "ticker": "MET",
+    "state": "ok"
+  },
+  {
+    "company": "Goldman Sachs Group",
+    "industry": "Commercial Banks",
+    "csv_ticker": "GS",
+    "ticker": "GS",
+    "state": "ok"
+  },
+  {
+    "company": "Sysco",
+    "industry": "Wholesalers: Food and Grocery",
+    "csv_ticker": "SYY",
+    "ticker": "SYY",
+    "state": "ok"
+  },
+  {
+    "company": "Raytheon Technologies",
+    "industry": "Aerospace & Defense",
+    "csv_ticker": "RTX",
+    "ticker": "RTX",
+    "state": "ok"
+  },
+  {
+    "company": "Boeing",
+    "industry": "Aerospace & Defense",
+    "csv_ticker": "BA",
+    "ticker": "BA",
+    "state": "ok"
+  },
+  {
+    "company": "StoneX Group",
+    "industry": "Diversified Financials",
+    "csv_ticker": "SNEX",
+    "ticker": "SNEX",
+    "state": "ok"
+  },
+  {
+    "company": "Lockheed Martin",
+    "industry": "Aerospace & Defense",
+    "csv_ticker": "LMT",
+    "ticker": "LMT",
+    "state": "ok"
+  },
+  {
+    "company": "Morgan Stanley",
+    "industry": "Commercial Banks",
+    "csv_ticker": "MS",
+    "ticker": "MS",
+    "state": "ok"
+  },
+  {
+    "company": "Intel",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "INTC",
+    "ticker": "INTC",
+    "state": "ok"
+  },
+  {
+    "company": "HP",
+    "industry": "Computers, Office Equipment",
+    "csv_ticker": "HPQ",
+    "ticker": "HPQ",
+    "state": "ok"
+  },
+  {
+    "company": "TD Synnex",
+    "industry": "Wholesalers: Electronics and Office Equipment",
+    "csv_ticker": "SNX",
+    "ticker": "SNX",
+    "state": "ok"
+  },
+  {
+    "company": "International Business Machines",
+    "industry": "Information Technology Services",
+    "csv_ticker": "IBM",
+    "ticker": "IBM",
+    "state": "ok"
+  },
+  {
+    "company": "HCA Healthcare",
+    "industry": "Health Care: Medical Facilities",
+    "csv_ticker": "HCA",
+    "ticker": "HCA",
+    "state": "ok"
+  },
+  {
+    "company": "Prudential Financial",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "PRU",
+    "ticker": "PRU",
+    "state": "ok"
+  },
+  {
+    "company": "Caterpillar",
+    "industry": "Construction and Farm Machinery",
+    "csv_ticker": "CAT",
+    "ticker": "CAT",
+    "state": "ok"
+  },
+  {
+    "company": "Merck",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "MRK",
+    "ticker": "MRK",
+    "state": "ok"
+  },
+  {
+    "company": "World Fuel Services",
+    "industry": "Energy",
+    "csv_ticker": "INT",
+    "ticker": "INT",
+    "state": "ok"
+  },
+  {
+    "company": "New York Life Insurance",
+    "industry": "Insurance: Life, Health (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Enterprise Products Partners",
+    "industry": "Pipelines",
+    "csv_ticker": "EPD",
+    "ticker": "EPD",
+    "state": "ok"
+  },
+  {
+    "company": "AbbVie",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "ABBV",
+    "ticker": "ABBV",
+    "state": "ok"
+  },
+  {
+    "company": "Plains GP Holdings",
+    "industry": "Pipelines",
+    "csv_ticker": "PAGP",
+    "ticker": "PAGP",
+    "state": "ok"
+  },
+  {
+    "company": "Dow",
+    "industry": "Chemicals",
+    "csv_ticker": "DOW",
+    "ticker": "DOW",
+    "state": "ok"
+  },
+  {
+    "company": "American International Group",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "AIG",
+    "ticker": "AIG",
+    "state": "ok"
+  },
+  {
+    "company": "American Express",
+    "industry": "Diversified Financials",
+    "csv_ticker": "AXP",
+    "ticker": "AXP",
+    "state": "ok"
+  },
+  {
+    "company": "Publix Super Markets",
+    "industry": "Food and Drug Stores",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Charter Communications",
+    "industry": "Telecommunications",
+    "csv_ticker": "CHTR",
+    "ticker": "CHTR",
+    "state": "ok"
+  },
+  {
+    "company": "Tyson Foods",
+    "industry": "Food Production",
+    "csv_ticker": "TSN",
+    "ticker": "TSN",
+    "state": "ok"
+  },
+  {
+    "company": "Deere",
+    "industry": "Construction and Farm Machinery",
+    "csv_ticker": "DE",
+    "ticker": "DE",
+    "state": "ok"
+  },
+  {
+    "company": "Cisco Systems",
+    "industry": "Network and Other Communications Equipment",
+    "csv_ticker": "CSCO",
+    "ticker": "CSCO",
+    "state": "ok"
+  },
+  {
+    "company": "Nationwide",
+    "industry": "Insurance: Property and Casualty (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Allstate",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "ALL",
+    "ticker": "ALL",
+    "state": "ok"
+  },
+  {
+    "company": "Delta Air Lines",
+    "industry": "Airlines",
+    "csv_ticker": "DAL",
+    "ticker": "DAL",
+    "state": "ok"
+  },
+  {
+    "company": "Liberty Mutual Insurance Group",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "TJX",
+    "industry": "Specialty Retailers: Apparel",
+    "csv_ticker": "TJX",
+    "ticker": "TJX",
+    "state": "ok"
+  },
+  {
+    "company": "Progressive",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "PGR",
+    "ticker": "PGR",
+    "state": "ok"
+  },
+  {
+    "company": "American Airlines Group",
+    "industry": "Airlines",
+    "csv_ticker": "AAL",
+    "ticker": "AAL",
+    "state": "ok"
+  },
+  {
+    "company": "CHS",
+    "industry": "Food Production",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Performance Food Group",
+    "industry": "Wholesalers: Food and Grocery",
+    "csv_ticker": "PFGC",
+    "ticker": "PFGC",
+    "state": "ok"
+  },
+  {
+    "company": "PBF Energy",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "PBF",
+    "ticker": "PBF",
+    "state": "ok"
+  },
+  {
+    "company": "Nike",
+    "industry": "Apparel",
+    "csv_ticker": "NKE",
+    "ticker": "NKE",
+    "state": "ok"
+  },
+  {
+    "company": "Best Buy",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "BBY",
+    "ticker": "BBY",
+    "state": "ok"
+  },
+  {
+    "company": "Bristol-Myers Squibb",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "BMY",
+    "ticker": "BMY",
+    "state": "ok"
+  },
+  {
+    "company": "United Airlines Holdings",
+    "industry": "Airlines",
+    "csv_ticker": "UAL",
+    "ticker": "UAL",
+    "state": "ok"
+  },
+  {
+    "company": "Thermo Fisher Scientific",
+    "industry": "Scientific, Photographic and Control Equipment",
+    "csv_ticker": "TMO",
+    "ticker": "TMO",
+    "state": "ok"
+  },
+  {
+    "company": "Qualcomm",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "QCOM",
+    "ticker": "QCOM",
+    "state": "ok"
+  },
+  {
+    "company": "Abbott Laboratories",
+    "industry": "Medical Products and Equipment",
+    "csv_ticker": "ABT",
+    "ticker": "ABT",
+    "state": "ok"
+  },
+  {
+    "company": "Coca-Cola",
+    "industry": "Beverages",
+    "csv_ticker": "KO",
+    "ticker": "KO",
+    "state": "ok"
+  },
+  {
+    "company": "Oracle",
+    "industry": "Computer Software",
+    "csv_ticker": "ORCL",
+    "ticker": "ORCL",
+    "state": "ok"
+  },
+  {
+    "company": "Nucor",
+    "industry": "Metals",
+    "csv_ticker": "NUE",
+    "ticker": "NUE",
+    "state": "ok"
+  },
+  {
+    "company": "TIAA",
+    "industry": "Insurance: Life, Health (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Massachusetts Mutual Life Insurance",
+    "industry": "Insurance: Life, Health (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "General Dynamics",
+    "industry": "Aerospace & Defense",
+    "csv_ticker": "GD",
+    "ticker": "GD",
+    "state": "ok"
+  },
+  {
+    "company": "Capital One Financial",
+    "industry": "Commercial Banks",
+    "csv_ticker": "COF",
+    "ticker": "COF",
+    "state": "ok"
+  },
+  {
+    "company": "HF Sinclair",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "DINO",
+    "ticker": "DINO",
+    "state": "ok"
+  },
+  {
+    "company": "Dollar General",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "DG",
+    "ticker": "DG",
+    "state": "ok"
+  },
+  {
+    "company": "Arrow Electronics",
+    "industry": "Wholesalers: Electronics and Office Equipment",
+    "csv_ticker": "ARW",
+    "ticker": "ARW",
+    "state": "ok"
+  },
+  {
+    "company": "Occidental Petroleum",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "OXY",
+    "ticker": "OXY",
+    "state": "ok"
+  },
+  {
+    "company": "Northwestern Mutual",
+    "industry": "Insurance: Life, Health (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Travelers",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "TRV",
+    "ticker": "TRV",
+    "state": "ok"
+  },
+  {
+    "company": "Northrop Grumman",
+    "industry": "Aerospace & Defense",
+    "csv_ticker": "NOC",
+    "ticker": "NOC",
+    "state": "ok"
+  },
+  {
+    "company": "United Services Automobile Assn.",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Honeywell International",
+    "industry": "Electronics, Electrical Equip.",
+    "csv_ticker": "HON",
+    "ticker": "HON",
+    "state": "ok"
+  },
+  {
+    "company": "3M",
+    "industry": "Chemicals",
+    "csv_ticker": "MMM",
+    "ticker": "MMM",
+    "state": "ok"
+  },
+  {
+    "company": "US Foods Holding",
+    "industry": "Wholesalers: Food and Grocery",
+    "csv_ticker": "USFD",
+    "ticker": "USFD",
+    "state": "ok"
+  },
+  {
+    "company": "Warner Bros. Discovery",
+    "industry": "Entertainment",
+    "csv_ticker": "WBD",
+    "ticker": "WBD",
+    "state": "ok"
+  },
+  {
+    "company": "Lennar",
+    "industry": "Homebuilders",
+    "csv_ticker": "LEN",
+    "ticker": "LEN",
+    "state": "ok"
+  },
+  {
+    "company": "D.R. Horton",
+    "industry": "Homebuilders",
+    "csv_ticker": "DHI",
+    "ticker": "DHI",
+    "state": "ok"
+  },
+  {
+    "company": "Jabil",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "JBL",
+    "ticker": "JBL",
+    "state": "ok"
+  },
+  {
+    "company": "Cheniere Energy",
+    "industry": "Pipelines",
+    "csv_ticker": "LNG",
+    "ticker": "LNG",
+    "state": "ok"
+  },
+  {
+    "company": "Broadcom",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "AVGO",
+    "ticker": "AVGO",
+    "state": "ok"
+  },
+  {
+    "company": "CarMax",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "KMX",
+    "ticker": "KMX",
+    "state": "ok"
+  },
+  {
+    "company": "Starbucks",
+    "industry": "Food Services",
+    "csv_ticker": "SBUX",
+    "ticker": "SBUX",
+    "state": "ok"
+  },
+  {
+    "company": "Molina Healthcare",
+    "industry": "Health Care: Insurance and Managed Care",
+    "csv_ticker": "MOH",
+    "ticker": "MOH",
+    "state": "ok"
+  },
+  {
+    "company": "Uber Technologies",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "UBER",
+    "ticker": "UBER",
+    "state": "ok"
+  },
+  {
+    "company": "Philip Morris International",
+    "industry": "Tobacco",
+    "csv_ticker": "PM",
+    "ticker": "PM",
+    "state": "ok"
+  },
+  {
+    "company": "Netflix",
+    "industry": "Entertainment",
+    "csv_ticker": "NFLX",
+    "ticker": "NFLX",
+    "state": "ok"
+  },
+  {
+    "company": "NRG Energy",
+    "industry": "Energy",
+    "csv_ticker": "NRG",
+    "ticker": "NRG",
+    "state": "ok"
+  },
+  {
+    "company": "Mondelez International",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "MDLZ",
+    "ticker": "MDLZ",
+    "state": "ok"
+  },
+  {
+    "company": "Danaher",
+    "industry": "Medical Products and Equipment",
+    "csv_ticker": "DHR",
+    "ticker": "DHR",
+    "state": "ok"
+  },
+  {
+    "company": "Salesforce",
+    "industry": "Computer Software",
+    "csv_ticker": "CRM",
+    "ticker": "CRM",
+    "state": "ok"
+  },
+  {
+    "company": "Paramount Global",
+    "industry": "Entertainment",
+    "csv_ticker": "PARA",
+    "ticker": "PARA",
+    "state": "ok"
+  },
+  {
+    "company": "CBRE Group",
+    "industry": "Real Estate",
+    "csv_ticker": "CBRE",
+    "ticker": "CBRE",
+    "state": "ok"
+  },
+  {
+    "company": "Micron Technology",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "MU",
+    "ticker": "MU",
+    "state": "ok"
+  },
+  {
+    "company": "Visa",
+    "industry": "Financial Data Services",
+    "csv_ticker": "V",
+    "ticker": "V",
+    "state": "ok"
+  },
+  {
+    "company": "Southern",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "SO",
+    "ticker": "SO",
+    "state": "ok"
+  },
+  {
+    "company": "United Natural Foods",
+    "industry": "Wholesalers: Food and Grocery",
+    "csv_ticker": "UNFI",
+    "ticker": "UNFI",
+    "state": "ok"
+  },
+  {
+    "company": "Paccar",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "PCAR",
+    "ticker": "PCAR",
+    "state": "ok"
+  },
+  {
+    "company": "Duke Energy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "DUK",
+    "ticker": "DUK",
+    "state": "ok"
+  },
+  {
+    "company": "Eli Lilly",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "LLY",
+    "ticker": "LLY",
+    "state": "ok"
+  },
+  {
+    "company": "Hewlett Packard Enterprise",
+    "industry": "Computers, Office Equipment",
+    "csv_ticker": "HPE",
+    "ticker": "HPE",
+    "state": "ok"
+  },
+  {
+    "company": "Dollar Tree",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "DLTR",
+    "ticker": "DLTR",
+    "state": "ok"
+  },
+  {
+    "company": "Lithia Motors",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "LAD",
+    "ticker": "LAD",
+    "state": "ok"
+  },
+  {
+    "company": "Cummins",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "CMI",
+    "ticker": "CMI",
+    "state": "ok"
+  },
+  {
+    "company": "Penske Automotive Group",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "PAG",
+    "ticker": "PAG",
+    "state": "ok"
+  },
+  {
+    "company": "PayPal Holdings",
+    "industry": "Financial Data Services",
+    "csv_ticker": "PYPL",
+    "ticker": "PYPL",
+    "state": "ok"
+  },
+  {
+    "company": "U.S. Bancorp",
+    "industry": "Commercial Banks",
+    "csv_ticker": "USB",
+    "ticker": "USB",
+    "state": "ok"
+  },
+  {
+    "company": "Gilead Sciences",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "GILD",
+    "ticker": "GILD",
+    "state": "ok"
+  },
+  {
+    "company": "AutoNation",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "AN",
+    "ticker": "AN",
+    "state": "ok"
+  },
+  {
+    "company": "Nvidia",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "NVDA",
+    "ticker": "NVDA",
+    "state": "ok"
+  },
+  {
+    "company": "Kraft Heinz",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "KHC",
+    "ticker": "KHC",
+    "state": "ok"
+  },
+  {
+    "company": "Amgen",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "AMGN",
+    "ticker": "AMGN",
+    "state": "ok"
+  },
+  {
+    "company": "Applied Materials",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "AMAT",
+    "ticker": "AMAT",
+    "state": "ok"
+  },
+  {
+    "company": "EOG Resources",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "EOG",
+    "ticker": "EOG",
+    "state": "ok"
+  },
+  {
+    "company": "Truist Financial",
+    "industry": "Commercial Banks",
+    "csv_ticker": "TFC",
+    "ticker": "TFC",
+    "state": "ok"
+  },
+  {
+    "company": "Macy's",
+    "industry": "General Merchandisers",
+    "csv_ticker": "M",
+    "ticker": "M",
+    "state": "ok"
+  },
+  {
+    "company": "Union Pacific",
+    "industry": "Railroads",
+    "csv_ticker": "UNP",
+    "ticker": "UNP",
+    "state": "ok"
+  },
+  {
+    "company": "C.H. Robinson Worldwide",
+    "industry": "Transportation and Logistics",
+    "csv_ticker": "CHRW",
+    "ticker": "CHRW",
+    "state": "ok"
+  },
+  {
+    "company": "Rite Aid",
+    "industry": "Food and Drug Stores",
+    "csv_ticker": "RAD",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Constellation Energy",
+    "industry": "Energy",
+    "csv_ticker": "CEG",
+    "ticker": "CEG",
+    "state": "ok"
+  },
+  {
+    "company": "Avnet",
+    "industry": "Wholesalers: Electronics and Office Equipment",
+    "csv_ticker": "AVT",
+    "ticker": "AVT",
+    "state": "ok"
+  },
+  {
+    "company": "Pioneer Natural Resources",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "PXD",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Southwest Airlines",
+    "industry": "Airlines",
+    "csv_ticker": "LUV",
+    "ticker": "LUV",
+    "state": "ok"
+  },
+  {
+    "company": "CDW",
+    "industry": "Information Technology Services",
+    "csv_ticker": "CDW",
+    "ticker": "CDW",
+    "state": "ok"
+  },
+  {
+    "company": "Advanced Micro Devices",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "AMD",
+    "ticker": "AMD",
+    "state": "ok"
+  },
+  {
+    "company": "PNC Financial Services Group",
+    "industry": "Commercial Banks",
+    "csv_ticker": "PNC",
+    "ticker": "PNC",
+    "state": "ok"
+  },
+  {
+    "company": "McDonald's",
+    "industry": "Food Services",
+    "csv_ticker": "MCD",
+    "ticker": "MCD",
+    "state": "ok"
+  },
+  {
+    "company": "Cleveland-Cliffs",
+    "industry": "Metals",
+    "csv_ticker": "CLF",
+    "ticker": "CLF",
+    "state": "ok"
+  },
+  {
+    "company": "Freeport-McMoRan",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "FCX",
+    "ticker": "FCX",
+    "state": "ok"
+  },
+  {
+    "company": "Builders FirstSource",
+    "industry": "Building Materials, Glass",
+    "csv_ticker": "BLDR",
+    "ticker": "BLDR",
+    "state": "ok"
+  },
+  {
+    "company": "Oneok",
+    "industry": "Pipelines",
+    "csv_ticker": "OKE",
+    "ticker": "OKE",
+    "state": "ok"
+  },
+  {
+    "company": "Hartford Financial Services Group",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "HIG",
+    "ticker": "HIG",
+    "state": "ok"
+  },
+  {
+    "company": "Charles Schwab",
+    "industry": "Securities",
+    "csv_ticker": "SCHW",
+    "ticker": "SCHW",
+    "state": "ok"
+  },
+  {
+    "company": "Steel Dynamics",
+    "industry": "Metals",
+    "csv_ticker": "STLD",
+    "ticker": "STLD",
+    "state": "ok"
+  },
+  {
+    "company": "Mastercard",
+    "industry": "Financial Data Services",
+    "csv_ticker": "MA",
+    "ticker": "MA",
+    "state": "ok"
+  },
+  {
+    "company": "Sherwin-Williams",
+    "industry": "Chemicals",
+    "csv_ticker": "SHW",
+    "ticker": "SHW",
+    "state": "ok"
+  },
+  {
+    "company": "Genuine Parts",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "GPC",
+    "ticker": "GPC",
+    "state": "ok"
+  },
+  {
+    "company": "PG&E",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "PCG",
+    "ticker": "PCG",
+    "state": "ok"
+  },
+  {
+    "company": "WESCO International",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "WCC",
+    "ticker": "WCC",
+    "state": "ok"
+  },
+  {
+    "company": "Murphy USA",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "MUSA",
+    "ticker": "MUSA",
+    "state": "ok"
+  },
+  {
+    "company": "WestRock",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "WRK",
+    "ticker": "SW",
+    "state": "fixed"
+  },
+  {
+    "company": "International Paper",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "IP",
+    "ticker": "IP",
+    "state": "ok"
+  },
+  {
+    "company": "Baker Hughes",
+    "industry": "Oil and Gas Equipment, Services",
+    "csv_ticker": "BKR",
+    "ticker": "BKR",
+    "state": "ok"
+  },
+  {
+    "company": "United States Steel",
+    "industry": "Metals",
+    "csv_ticker": "X",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "NextEra Energy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "NEE",
+    "ticker": "NEE",
+    "state": "ok"
+  },
+  {
+    "company": "Targa Resources",
+    "industry": "Pipelines",
+    "csv_ticker": "TRGP",
+    "ticker": "TRGP",
+    "state": "ok"
+  },
+  {
+    "company": "Lear",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "LEA",
+    "ticker": "LEA",
+    "state": "ok"
+  },
+  {
+    "company": "Jones Lang LaSalle",
+    "industry": "Real Estate",
+    "csv_ticker": "JLL",
+    "ticker": "JLL",
+    "state": "ok"
+  },
+  {
+    "company": "Goodyear Tire & Rubber",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "GT",
+    "ticker": "GT",
+    "state": "ok"
+  },
+  {
+    "company": "Marriott International",
+    "industry": "Hotels, Casinos, Resorts",
+    "csv_ticker": "MAR",
+    "ticker": "MAR",
+    "state": "ok"
+  },
+  {
+    "company": "Marsh & McLennan",
+    "industry": "Diversified Financials",
+    "csv_ticker": "MMC",
+    "ticker": "MRSH",
+    "state": "fixed"
+  },
+  {
+    "company": "Altria Group",
+    "industry": "Tobacco",
+    "csv_ticker": "MO",
+    "ticker": "MO",
+    "state": "ok"
+  },
+  {
+    "company": "Coupang",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "CPNG",
+    "ticker": "CPNG",
+    "state": "ok"
+  },
+  {
+    "company": "Carrier Global",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "CARR",
+    "ticker": "CARR",
+    "state": "ok"
+  },
+  {
+    "company": "Halliburton",
+    "industry": "Oil and Gas Equipment, Services",
+    "csv_ticker": "HAL",
+    "ticker": "HAL",
+    "state": "ok"
+  },
+  {
+    "company": "Delek US Holdings",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "DK",
+    "ticker": "DK",
+    "state": "ok"
+  },
+  {
+    "company": "Kimberly-Clark",
+    "industry": "Household and Personal Products",
+    "csv_ticker": "KMB",
+    "ticker": "KMB",
+    "state": "ok"
+  },
+  {
+    "company": "Texas Instruments",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "TXN",
+    "ticker": "TXN",
+    "state": "ok"
+  },
+  {
+    "company": "Bank of New York Mellon",
+    "industry": "Commercial Banks",
+    "csv_ticker": "BK",
+    "ticker": "BNY",
+    "state": "fixed"
+  },
+  {
+    "company": "ManpowerGroup",
+    "industry": "Temporary Help",
+    "csv_ticker": "MAN",
+    "ticker": "MAN",
+    "state": "ok"
+  },
+  {
+    "company": "Whirlpool",
+    "industry": "Electronics, Electrical Equip.",
+    "csv_ticker": "WHR",
+    "ticker": "WHR",
+    "state": "ok"
+  },
+  {
+    "company": "Waste Management",
+    "industry": "Waste Management",
+    "csv_ticker": "WM",
+    "ticker": "WM",
+    "state": "ok"
+  },
+  {
+    "company": "American Electric Power",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "AEP",
+    "ticker": "AEP",
+    "state": "ok"
+  },
+  {
+    "company": "Emerson Electric",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "EMR",
+    "ticker": "EMR",
+    "state": "ok"
+  },
+  {
+    "company": "Aflac",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "AFL",
+    "ticker": "AFL",
+    "state": "ok"
+  },
+  {
+    "company": "Cognizant Technology Solutions",
+    "industry": "Information Technology Services",
+    "csv_ticker": "CTSH",
+    "ticker": "CTSH",
+    "state": "ok"
+  },
+  {
+    "company": "Becton Dickinson",
+    "industry": "Medical Products and Equipment",
+    "csv_ticker": "BDX",
+    "ticker": "BDX",
+    "state": "ok"
+  },
+  {
+    "company": "BJ's Wholesale Club",
+    "industry": "General Merchandisers",
+    "csv_ticker": "BJ",
+    "ticker": "BJ",
+    "state": "ok"
+  },
+  {
+    "company": "Moderna",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "MRNA",
+    "ticker": "MRNA",
+    "state": "ok"
+  },
+  {
+    "company": "DTE Energy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "DTE",
+    "ticker": "DTE",
+    "state": "ok"
+  },
+  {
+    "company": "Land O'Lakes",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Kinder Morgan",
+    "industry": "Pipelines",
+    "csv_ticker": "KMI",
+    "ticker": "KMI",
+    "state": "ok"
+  },
+  {
+    "company": "Tenet Healthcare",
+    "industry": "Health Care: Medical Facilities",
+    "csv_ticker": "THC",
+    "ticker": "THC",
+    "state": "ok"
+  },
+  {
+    "company": "Devon Energy",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "DVN",
+    "ticker": "DVN",
+    "state": "ok"
+  },
+  {
+    "company": "Mosaic",
+    "industry": "Chemicals",
+    "csv_ticker": "MOS",
+    "ticker": "MOS",
+    "state": "ok"
+  },
+  {
+    "company": "Exelon",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "EXC",
+    "ticker": "EXC",
+    "state": "ok"
+  },
+  {
+    "company": "General Mills",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "GIS",
+    "ticker": "GIS",
+    "state": "ok"
+  },
+  {
+    "company": "Global Partners",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "GLP",
+    "ticker": "GLP",
+    "state": "ok"
+  },
+  {
+    "company": "Western Digital",
+    "industry": "Computers, Office Equipment",
+    "csv_ticker": "WDC",
+    "ticker": "WDC",
+    "state": "ok"
+  },
+  {
+    "company": "Lincoln National",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "LNC",
+    "ticker": "LNC",
+    "state": "ok"
+  },
+  {
+    "company": "Ross Stores",
+    "industry": "Specialty Retailers: Apparel",
+    "csv_ticker": "ROST",
+    "ticker": "ROST",
+    "state": "ok"
+  },
+  {
+    "company": "Stryker",
+    "industry": "Medical Products and Equipment",
+    "csv_ticker": "SYK",
+    "ticker": "SYK",
+    "state": "ok"
+  },
+  {
+    "company": "Kyndryl Holdings",
+    "industry": "Information Technology Services",
+    "csv_ticker": "KD",
+    "ticker": "KD",
+    "state": "ok"
+  },
+  {
+    "company": "Kohl's",
+    "industry": "General Merchandisers",
+    "csv_ticker": "KSS",
+    "ticker": "KSS",
+    "state": "ok"
+  },
+  {
+    "company": "Stanley Black & Decker",
+    "industry": "Home Equipment, Furnishings",
+    "csv_ticker": "SWK",
+    "ticker": "SWK",
+    "state": "ok"
+  },
+  {
+    "company": "Colgate-Palmolive",
+    "industry": "Household and Personal Products",
+    "csv_ticker": "CL",
+    "ticker": "CL",
+    "state": "ok"
+  },
+  {
+    "company": "BlackRock",
+    "industry": "Securities",
+    "csv_ticker": "BLK",
+    "ticker": "BLK",
+    "state": "ok"
+  },
+  {
+    "company": "Fiserv",
+    "industry": "Financial Data Services",
+    "csv_ticker": "FISV",
+    "ticker": "FISV",
+    "state": "ok"
+  },
+  {
+    "company": "Estée Lauder",
+    "industry": "Household and Personal Products",
+    "csv_ticker": "EL",
+    "ticker": "EL",
+    "state": "ok"
+  },
+  {
+    "company": "PPG Industries",
+    "industry": "Chemicals",
+    "csv_ticker": "PPG",
+    "ticker": "PPG",
+    "state": "ok"
+  },
+  {
+    "company": "Adobe",
+    "industry": "Computer Software",
+    "csv_ticker": "ADBE",
+    "ticker": "ADBE",
+    "state": "ok"
+  },
+  {
+    "company": "Block",
+    "industry": "Financial Data Services",
+    "csv_ticker": "SQ",
+    "ticker": "XYZ",
+    "state": "fixed"
+  },
+  {
+    "company": "Synchrony Financial",
+    "industry": "Diversified Financials",
+    "csv_ticker": "SYF",
+    "ticker": "SYF",
+    "state": "ok"
+  },
+  {
+    "company": "Principal Financial",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "PFG",
+    "ticker": "PFG",
+    "state": "ok"
+  },
+  {
+    "company": "Lumen Technologies",
+    "industry": "Telecommunications",
+    "csv_ticker": "LUMN",
+    "ticker": "LUMN",
+    "state": "ok"
+  },
+  {
+    "company": "Corteva",
+    "industry": "Food Production",
+    "csv_ticker": "CTVA",
+    "ticker": "CTVA",
+    "state": "ok"
+  },
+  {
+    "company": "Andersons",
+    "industry": "Food Production",
+    "csv_ticker": "ANDE",
+    "ticker": "ANDE",
+    "state": "ok"
+  },
+  {
+    "company": "Lam Research",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "LRCX",
+    "ticker": "LRCX",
+    "state": "ok"
+  },
+  {
+    "company": "Edison International",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "EIX",
+    "ticker": "EIX",
+    "state": "ok"
+  },
+  {
+    "company": "Dominion Energy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "D",
+    "ticker": "D",
+    "state": "ok"
+  },
+  {
+    "company": "Booking Holdings",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "BKNG",
+    "ticker": "BKNG",
+    "state": "ok"
+  },
+  {
+    "company": "Quanta Services",
+    "industry": "Engineering & Construction",
+    "csv_ticker": "PWR",
+    "ticker": "PWR",
+    "state": "ok"
+  },
+  {
+    "company": "Expeditors International of Washington",
+    "industry": "Transportation and Logistics",
+    "csv_ticker": "EXPD",
+    "ticker": "EXPD",
+    "state": "ok"
+  },
+  {
+    "company": "L3Harris Technologies",
+    "industry": "Aerospace & Defense",
+    "csv_ticker": "LHX",
+    "ticker": "LHX",
+    "state": "ok"
+  },
+  {
+    "company": "Reliance Steel & Aluminum",
+    "industry": "Metals",
+    "csv_ticker": "RS",
+    "ticker": "RS",
+    "state": "ok"
+  },
+  {
+    "company": "Live Nation Entertainment",
+    "industry": "Entertainment",
+    "csv_ticker": "LYV",
+    "ticker": "LYV",
+    "state": "ok"
+  },
+  {
+    "company": "DISH Network",
+    "industry": "Telecommunications",
+    "csv_ticker": "DISH",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "DuPont",
+    "industry": "Chemicals",
+    "csv_ticker": "DD",
+    "ticker": "DD",
+    "state": "ok"
+  },
+  {
+    "company": "Automatic Data Processing",
+    "industry": "Diversified Outsourcing Services",
+    "csv_ticker": "ADP",
+    "ticker": "ADP",
+    "state": "ok"
+  },
+  {
+    "company": "Group 1 Automotive",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "GPI",
+    "ticker": "GPI",
+    "state": "ok"
+  },
+  {
+    "company": "Aramark",
+    "industry": "Diversified Outsourcing Services",
+    "csv_ticker": "ARMK",
+    "ticker": "ARMK",
+    "state": "ok"
+  },
+  {
+    "company": "Thor Industries",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "THO",
+    "ticker": "THO",
+    "state": "ok"
+  },
+  {
+    "company": "DXC Technology",
+    "industry": "Information Technology Services",
+    "csv_ticker": "DXC",
+    "ticker": "DXC",
+    "state": "ok"
+  },
+  {
+    "company": "Viatris",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "VTRS",
+    "ticker": "VTRS",
+    "state": "ok"
+  },
+  {
+    "company": "Reinsurance Group of America",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "RGA",
+    "ticker": "RGA",
+    "state": "ok"
+  },
+  {
+    "company": "AutoZone",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "AZO",
+    "ticker": "AZO",
+    "state": "ok"
+  },
+  {
+    "company": "PulteGroup",
+    "industry": "Homebuilders",
+    "csv_ticker": "PHM",
+    "ticker": "PHM",
+    "state": "ok"
+  },
+  {
+    "company": "Illinois Tool Works",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "ITW",
+    "ticker": "ITW",
+    "state": "ok"
+  },
+  {
+    "company": "Parker-Hannifin",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "PH",
+    "ticker": "PH",
+    "state": "ok"
+  },
+  {
+    "company": "BorgWarner",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "BWA",
+    "ticker": "BWA",
+    "state": "ok"
+  },
+  {
+    "company": "Westlake",
+    "industry": "Chemicals",
+    "csv_ticker": "WLK",
+    "ticker": "WLK",
+    "state": "ok"
+  },
+  {
+    "company": "Consolidated Edison",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "ED",
+    "ticker": "ED",
+    "state": "ok"
+  },
+  {
+    "company": "Gap",
+    "industry": "Specialty Retailers: Apparel",
+    "csv_ticker": "GPS",
+    "ticker": "GAP",
+    "state": "fixed"
+  },
+  {
+    "company": "Opendoor Technologies",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "OPEN",
+    "ticker": "OPEN",
+    "state": "ok"
+  },
+  {
+    "company": "Nordstrom",
+    "industry": "General Merchandisers",
+    "csv_ticker": "JWN",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Asbury Automotive Group",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "ABG",
+    "ticker": "ABG",
+    "state": "ok"
+  },
+  {
+    "company": "Ball",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "BALL",
+    "ticker": "BALL",
+    "state": "ok"
+  },
+  {
+    "company": "Kellogg",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "K",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Xcel Energy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "XEL",
+    "ticker": "XEL",
+    "state": "ok"
+  },
+  {
+    "company": "W.W. Grainger",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "GWW",
+    "ticker": "GWW",
+    "state": "ok"
+  },
+  {
+    "company": "Discover Financial Services",
+    "industry": "Commercial Banks",
+    "csv_ticker": "DFS",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Baxter International",
+    "industry": "Medical Products and Equipment",
+    "csv_ticker": "BAX",
+    "ticker": "BAX",
+    "state": "ok"
+  },
+  {
+    "company": "Southwestern Energy",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "SWN",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "DCP Midstream",
+    "industry": "Pipelines",
+    "csv_ticker": "DCP",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Jacobs Solutions",
+    "industry": "Engineering & Construction",
+    "csv_ticker": "J",
+    "ticker": "J",
+    "state": "ok"
+  },
+  {
+    "company": "Laboratory Corp. of America",
+    "industry": "Health Care: Pharmacy and Other Services",
+    "csv_ticker": "LH",
+    "ticker": "LH",
+    "state": "ok"
+  },
+  {
+    "company": "CSX",
+    "industry": "Railroads",
+    "csv_ticker": "CSX",
+    "ticker": "CSX",
+    "state": "ok"
+  },
+  {
+    "company": "J.B. Hunt Transport Services",
+    "industry": "Trucking, Truck Leasing",
+    "csv_ticker": "JBHT",
+    "ticker": "JBHT",
+    "state": "ok"
+  },
+  {
+    "company": "Guardian Life Ins. Co. of America",
+    "industry": "Insurance: Life, Health (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Jackson Financial",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "JXN",
+    "ticker": "JXN",
+    "state": "ok"
+  },
+  {
+    "company": "Fidelity National Information Services",
+    "industry": "Financial Data Services",
+    "csv_ticker": "FIS",
+    "ticker": "FIS",
+    "state": "ok"
+  },
+  {
+    "company": "Berry Global Group",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "BERY",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Sempra",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "SRE",
+    "ticker": "SRE",
+    "state": "ok"
+  },
+  {
+    "company": "IQVIA Holdings",
+    "industry": "Health Care: Pharmacy and Other Services",
+    "csv_ticker": "IQV",
+    "ticker": "IQV",
+    "state": "ok"
+  },
+  {
+    "company": "O'Reilly Automotive",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "ORLY",
+    "ticker": "ORLY",
+    "state": "ok"
+  },
+  {
+    "company": "Leidos Holdings",
+    "industry": "Information Technology Services",
+    "csv_ticker": "LDOS",
+    "ticker": "LDOS",
+    "state": "ok"
+  },
+  {
+    "company": "Ameriprise Financial",
+    "industry": "Diversified Financials",
+    "csv_ticker": "AMP",
+    "ticker": "AMP",
+    "state": "ok"
+  },
+  {
+    "company": "Omnicom Group",
+    "industry": "Advertising, Marketing",
+    "csv_ticker": "OMC",
+    "ticker": "OMC",
+    "state": "ok"
+  },
+  {
+    "company": "Tractor Supply",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "TSCO",
+    "ticker": "TSCO",
+    "state": "ok"
+  },
+  {
+    "company": "Corning",
+    "industry": "Electronics, Electrical Equip.",
+    "csv_ticker": "GLW",
+    "ticker": "GLW",
+    "state": "ok"
+  },
+  {
+    "company": "Ecolab",
+    "industry": "Chemicals",
+    "csv_ticker": "ECL",
+    "ticker": "ECL",
+    "state": "ok"
+  },
+  {
+    "company": "Icahn Enterprises",
+    "industry": "Diversified Financials",
+    "csv_ticker": "IEP",
+    "ticker": "IEP",
+    "state": "ok"
+  },
+  {
+    "company": "Farmers Insurance Exchange",
+    "industry": "Insurance: Property and Casualty (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Keurig Dr Pepper",
+    "industry": "Beverages",
+    "csv_ticker": "KDP",
+    "ticker": "KDP",
+    "state": "ok"
+  },
+  {
+    "company": "Loews",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "L",
+    "ticker": "L",
+    "state": "ok"
+  },
+  {
+    "company": "Equitable Holdings",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "EQH",
+    "ticker": "EQH",
+    "state": "ok"
+  },
+  {
+    "company": "Sonic Automotive",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "SAH",
+    "ticker": "SAH",
+    "state": "ok"
+  },
+  {
+    "company": "Fox",
+    "industry": "Entertainment",
+    "csv_ticker": "FOXA",
+    "ticker": "FOXA",
+    "state": "ok"
+  },
+  {
+    "company": "American Family Insurance Group",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Entergy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "ETR",
+    "ticker": "ETR",
+    "state": "ok"
+  },
+  {
+    "company": "Fluor",
+    "industry": "Engineering & Construction",
+    "csv_ticker": "FLR",
+    "ticker": "FLR",
+    "state": "ok"
+  },
+  {
+    "company": "Vistra",
+    "industry": "Energy",
+    "csv_ticker": "VST",
+    "ticker": "VST",
+    "state": "ok"
+  },
+  {
+    "company": "State Street",
+    "industry": "Commercial Banks",
+    "csv_ticker": "STT",
+    "ticker": "STT",
+    "state": "ok"
+  },
+  {
+    "company": "Otis Worldwide",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "OTIS",
+    "ticker": "OTIS",
+    "state": "ok"
+  },
+  {
+    "company": "Peter Kiewit Sons'",
+    "industry": "Engineering & Construction",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Carvana",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "CVNA",
+    "ticker": "CVNA",
+    "state": "ok"
+  },
+  {
+    "company": "Republic Services",
+    "industry": "Waste Management",
+    "csv_ticker": "RSG",
+    "ticker": "RSG",
+    "state": "ok"
+  },
+  {
+    "company": "AECOM",
+    "industry": "Engineering & Construction",
+    "csv_ticker": "ACM",
+    "ticker": "ACM",
+    "state": "ok"
+  },
+  {
+    "company": "Universal Health Services",
+    "industry": "Health Care: Medical Facilities",
+    "csv_ticker": "UHS",
+    "ticker": "UHS",
+    "state": "ok"
+  },
+  {
+    "company": "Pacific Life",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "VMware",
+    "industry": "Computer Software",
+    "csv_ticker": "VMW",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Western & Southern Financial Group",
+    "industry": "Insurance: Life, Health (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "MGM Resorts International",
+    "industry": "Hotels, Casinos, Resorts",
+    "csv_ticker": "MGM",
+    "ticker": "MGM",
+    "state": "ok"
+  },
+  {
+    "company": "Casey's General Stores",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "CASY",
+    "ticker": "CASY",
+    "state": "ok"
+  },
+  {
+    "company": "Crown Holdings",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "CCK",
+    "ticker": "CCK",
+    "state": "ok"
+  },
+  {
+    "company": "Textron",
+    "industry": "Aerospace & Defense",
+    "csv_ticker": "TXT",
+    "ticker": "TXT",
+    "state": "ok"
+  },
+  {
+    "company": "LKQ",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "LKQ",
+    "ticker": "LKQ",
+    "state": "ok"
+  },
+  {
+    "company": "Norfolk Southern",
+    "industry": "Railroads",
+    "csv_ticker": "NSC",
+    "ticker": "NSC",
+    "state": "ok"
+  },
+  {
+    "company": "Intuit",
+    "industry": "Computer Software",
+    "csv_ticker": "INTU",
+    "ticker": "INTU",
+    "state": "ok"
+  },
+  {
+    "company": "Air Products & Chemicals",
+    "industry": "Chemicals",
+    "csv_ticker": "APD",
+    "ticker": "APD",
+    "state": "ok"
+  },
+  {
+    "company": "Boston Scientific",
+    "industry": "Medical Products and Equipment",
+    "csv_ticker": "BSX",
+    "ticker": "BSX",
+    "state": "ok"
+  },
+  {
+    "company": "AGCO",
+    "industry": "Construction and Farm Machinery",
+    "csv_ticker": "AGCO",
+    "ticker": "AGCO",
+    "state": "ok"
+  },
+  {
+    "company": "Henry Schein",
+    "industry": "Wholesalers: Health Care",
+    "csv_ticker": "HSIC",
+    "ticker": "HSIC",
+    "state": "ok"
+  },
+  {
+    "company": "Amphenol",
+    "industry": "Network and Other Communications Equipment",
+    "csv_ticker": "APH",
+    "ticker": "APH",
+    "state": "ok"
+  },
+  {
+    "company": "AES",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "AES",
+    "ticker": "AES",
+    "state": "ok"
+  },
+  {
+    "company": "Mutual of Omaha Insurance",
+    "industry": "Insurance: Life, Health (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Ovintiv",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "OVV",
+    "ticker": "OVV",
+    "state": "ok"
+  },
+  {
+    "company": "Hormel Foods",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "HRL",
+    "ticker": "HRL",
+    "state": "ok"
+  },
+  {
+    "company": "Alcoa",
+    "industry": "Metals",
+    "csv_ticker": "AA",
+    "ticker": "AA",
+    "state": "ok"
+  },
+  {
+    "company": "International Flavors & Fragrances",
+    "industry": "Chemicals",
+    "csv_ticker": "IFF",
+    "ticker": "IFF",
+    "state": "ok"
+  },
+  {
+    "company": "Jones Financial (Edward Jones)",
+    "industry": "Securities",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Dick's Sporting Goods",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "DKS",
+    "ticker": "DKS",
+    "state": "ok"
+  },
+  {
+    "company": "Eversource Energy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "ES",
+    "ticker": "ES",
+    "state": "ok"
+  },
+  {
+    "company": "Wayfair",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "W",
+    "ticker": "W",
+    "state": "ok"
+  },
+  {
+    "company": "Community Health Systems",
+    "industry": "Health Care: Medical Facilities",
+    "csv_ticker": "CYH",
+    "ticker": "CYH",
+    "state": "ok"
+  },
+  {
+    "company": "Ally Financial",
+    "industry": "Diversified Financials",
+    "csv_ticker": "ALLY",
+    "ticker": "ALLY",
+    "state": "ok"
+  },
+  {
+    "company": "Regeneron Pharmaceuticals",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "REGN",
+    "ticker": "REGN",
+    "state": "ok"
+  },
+  {
+    "company": "Liberty Media",
+    "industry": "Entertainment",
+    "csv_ticker": "LSXMA",
+    "ticker": "FWONB",
+    "state": "fixed"
+  },
+  {
+    "company": "APA",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "APA",
+    "ticker": "APA",
+    "state": "ok"
+  },
+  {
+    "company": "Qurate Retail",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "QRTEA",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "FirstEnergy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "FE",
+    "ticker": "FE",
+    "state": "ok"
+  },
+  {
+    "company": "Analog Devices",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "ADI",
+    "ticker": "ADI",
+    "state": "ok"
+  },
+  {
+    "company": "Ryder System",
+    "industry": "Transportation and Logistics",
+    "csv_ticker": "R",
+    "ticker": "R",
+    "state": "ok"
+  },
+  {
+    "company": "Avis Budget Group",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "CAR",
+    "ticker": "CAR",
+    "state": "ok"
+  },
+  {
+    "company": "Unum Group",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "UNM",
+    "ticker": "UNM",
+    "state": "ok"
+  },
+  {
+    "company": "Newmont",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "NEM",
+    "ticker": "NEM",
+    "state": "ok"
+  },
+  {
+    "company": "VF",
+    "industry": "Apparel",
+    "csv_ticker": "VFC",
+    "ticker": "VFC",
+    "state": "ok"
+  },
+  {
+    "company": "Chesapeake Energy",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "CHK",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Mohawk Industries",
+    "industry": "Home Equipment, Furnishings",
+    "csv_ticker": "MHK",
+    "ticker": "MHK",
+    "state": "ok"
+  },
+  {
+    "company": "Markel",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "MKL",
+    "ticker": "MKL",
+    "state": "ok"
+  },
+  {
+    "company": "Expedia Group",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "EXPE",
+    "ticker": "EXPE",
+    "state": "ok"
+  },
+  {
+    "company": "Caesars Entertainment",
+    "industry": "Hotels, Casinos, Resorts",
+    "csv_ticker": "CZR",
+    "ticker": "CZR",
+    "state": "ok"
+  },
+  {
+    "company": "United Rentals",
+    "industry": "Equipment Leasing",
+    "csv_ticker": "URI",
+    "ticker": "URI",
+    "state": "ok"
+  },
+  {
+    "company": "Apollo Global Management",
+    "industry": "Securities",
+    "csv_ticker": "APO",
+    "ticker": "APO",
+    "state": "ok"
+  },
+  {
+    "company": "DaVita",
+    "industry": "Health Care: Medical Facilities",
+    "csv_ticker": "DVA",
+    "ticker": "DVA",
+    "state": "ok"
+  },
+  {
+    "company": "Hess",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "HES",
+    "ticker": "HESM",
+    "state": "fixed"
+  },
+  {
+    "company": "Fidelity National Financial",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "FNF",
+    "ticker": "FNF",
+    "state": "ok"
+  },
+  {
+    "company": "Conagra Brands",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "CAG",
+    "ticker": "CAG",
+    "state": "ok"
+  },
+  {
+    "company": "Univar Solutions",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "UNVR",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Auto-Owners Insurance",
+    "industry": "Insurance: Property and Casualty (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Raymond James Financial",
+    "industry": "Securities",
+    "csv_ticker": "RJF",
+    "ticker": "RJF",
+    "state": "ok"
+  },
+  {
+    "company": "Seaboard",
+    "industry": "Food Production",
+    "csv_ticker": "SEB",
+    "ticker": "SEB",
+    "state": "ok"
+  },
+  {
+    "company": "CF Industries Holdings",
+    "industry": "Chemicals",
+    "csv_ticker": "CF",
+    "ticker": "CF",
+    "state": "ok"
+  },
+  {
+    "company": "S&P Global",
+    "industry": "Financial Data Services",
+    "csv_ticker": "SPGI",
+    "ticker": "SPGI",
+    "state": "ok"
+  },
+  {
+    "company": "W.R. Berkley",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "WRB",
+    "ticker": "WRB",
+    "state": "ok"
+  },
+  {
+    "company": "Advance Auto Parts",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "AAP",
+    "ticker": "AAP",
+    "state": "ok"
+  },
+  {
+    "company": "EMCOR Group",
+    "industry": "Engineering & Construction",
+    "csv_ticker": "EME",
+    "ticker": "EME",
+    "state": "ok"
+  },
+  {
+    "company": "Williams",
+    "industry": "Pipelines",
+    "csv_ticker": "WMB",
+    "ticker": "WMB",
+    "state": "ok"
+  },
+  {
+    "company": "Interpublic Group",
+    "industry": "Advertising, Marketing",
+    "csv_ticker": "IPG",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "TravelCenters of America",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "TA",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "American Tower",
+    "industry": "Real Estate",
+    "csv_ticker": "AMT",
+    "ticker": "AMT",
+    "state": "ok"
+  },
+  {
+    "company": "Molson Coors Beverage",
+    "industry": "Beverages",
+    "csv_ticker": "TAP",
+    "ticker": "TAP",
+    "state": "ok"
+  },
+  {
+    "company": "Huntington Ingalls Industries",
+    "industry": "Aerospace & Defense",
+    "csv_ticker": "HII",
+    "ticker": "HII",
+    "state": "ok"
+  },
+  {
+    "company": "NVR",
+    "industry": "Homebuilders",
+    "csv_ticker": "NVR",
+    "ticker": "NVR",
+    "state": "ok"
+  },
+  {
+    "company": "Eastman Chemical",
+    "industry": "Chemicals",
+    "csv_ticker": "EMN",
+    "ticker": "EMN",
+    "state": "ok"
+  },
+  {
+    "company": "Graybar Electric",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Insight Enterprises",
+    "industry": "Information Technology Services",
+    "csv_ticker": "NSIT",
+    "ticker": "NSIT",
+    "state": "ok"
+  },
+  {
+    "company": "Hershey",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "HSY",
+    "ticker": "HSY",
+    "state": "ok"
+  },
+  {
+    "company": "News Corp.",
+    "industry": "Publishing, Printing",
+    "csv_ticker": "NWSA",
+    "ticker": "NWSA",
+    "state": "ok"
+  },
+  {
+    "company": "Toll Brothers",
+    "industry": "Homebuilders",
+    "csv_ticker": "TOL",
+    "ticker": "TOL",
+    "state": "ok"
+  },
+  {
+    "company": "Ulta Beauty",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "ULTA",
+    "ticker": "ULTA",
+    "state": "ok"
+  },
+  {
+    "company": "Assurant",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "AIZ",
+    "ticker": "AIZ",
+    "state": "ok"
+  },
+  {
+    "company": "Weyerhaeuser",
+    "industry": "Forest and Paper Products",
+    "csv_ticker": "WY",
+    "ticker": "WY",
+    "state": "ok"
+  },
+  {
+    "company": "Biogen",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "BIIB",
+    "ticker": "BIIB",
+    "state": "ok"
+  },
+  {
+    "company": "Dana",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "DAN",
+    "ticker": "DAN",
+    "state": "ok"
+  },
+  {
+    "company": "UGI",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "UGI",
+    "ticker": "UGI",
+    "state": "ok"
+  },
+  {
+    "company": "Chewy",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "CHWY",
+    "ticker": "CHWY",
+    "state": "ok"
+  },
+  {
+    "company": "Owens & Minor",
+    "industry": "Wholesalers: Health Care",
+    "csv_ticker": "OMI",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Quest Diagnostics",
+    "industry": "Health Care: Pharmacy and Other Services",
+    "csv_ticker": "DGX",
+    "ticker": "DGX",
+    "state": "ok"
+  },
+  {
+    "company": "Public Service Enterprise Group",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "PEG",
+    "ticker": "PEG",
+    "state": "ok"
+  },
+  {
+    "company": "Ebay",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "EBAY",
+    "ticker": "EBAY",
+    "state": "ok"
+  },
+  {
+    "company": "MasTec",
+    "industry": "Engineering & Construction",
+    "csv_ticker": "MTZ",
+    "ticker": "MTZ",
+    "state": "ok"
+  },
+  {
+    "company": "Owens Corning",
+    "industry": "Building Materials, Glass",
+    "csv_ticker": "OC",
+    "ticker": "OC",
+    "state": "ok"
+  },
+  {
+    "company": "Celanese",
+    "industry": "Chemicals",
+    "csv_ticker": "CE",
+    "ticker": "CE",
+    "state": "ok"
+  },
+  {
+    "company": "Altice USA",
+    "industry": "Telecommunications",
+    "csv_ticker": "ATUS",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Alaska Air Group",
+    "industry": "Airlines",
+    "csv_ticker": "ALK",
+    "ticker": "ALK",
+    "state": "ok"
+  },
+  {
+    "company": "SpartanNash",
+    "industry": "Wholesalers: Food and Grocery",
+    "csv_ticker": "SPTN",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Diamondback Energy",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "FANG",
+    "ticker": "FANG",
+    "state": "ok"
+  },
+  {
+    "company": "Intercontinental Exchange",
+    "industry": "Securities",
+    "csv_ticker": "ICE",
+    "ticker": "ICE",
+    "state": "ok"
+  },
+  {
+    "company": "Darden Restaurants",
+    "industry": "Food Services",
+    "csv_ticker": "DRI",
+    "ticker": "DRI",
+    "state": "ok"
+  },
+  {
+    "company": "UFP Industries",
+    "industry": "Building Materials, Glass",
+    "csv_ticker": "UFPI",
+    "ticker": "UFPI",
+    "state": "ok"
+  },
+  {
+    "company": "WEC Energy Group",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "WEC",
+    "ticker": "WEC",
+    "state": "ok"
+  },
+  {
+    "company": "Yum China Holdings",
+    "industry": "Food Services",
+    "csv_ticker": "YUMC",
+    "ticker": "YUMC",
+    "state": "ok"
+  },
+  {
+    "company": "EnLink Midstream",
+    "industry": "Pipelines",
+    "csv_ticker": "ENLC",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Continental Resources",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Newell Brands",
+    "industry": "Home Equipment, Furnishings",
+    "csv_ticker": "NWL",
+    "ticker": "NWL",
+    "state": "ok"
+  },
+  {
+    "company": "Graphic Packaging Holding",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "GPK",
+    "ticker": "GPK",
+    "state": "ok"
+  },
+  {
+    "company": "Olin",
+    "industry": "Chemicals",
+    "csv_ticker": "OLN",
+    "ticker": "OLN",
+    "state": "ok"
+  },
+  {
+    "company": "Fifth Third Bancorp",
+    "industry": "Commercial Banks",
+    "csv_ticker": "FITB",
+    "ticker": "FITB",
+    "state": "ok"
+  },
+  {
+    "company": "Thrivent Financial for Lutherans",
+    "industry": "Insurance: Life, Health (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "CenterPoint Energy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "CNP",
+    "ticker": "CNP",
+    "state": "ok"
+  },
+  {
+    "company": "Erie Insurance Group",
+    "industry": "Insurance: Property and Casualty (Mutual)",
+    "csv_ticker": "",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "CommScope Holding",
+    "industry": "Network and Other Communications Equipment",
+    "csv_ticker": "COMM",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "KLA",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "KLAC",
+    "ticker": "KLAC",
+    "state": "ok"
+  },
+  {
+    "company": "JetBlue Airways",
+    "industry": "Airlines",
+    "csv_ticker": "JBLU",
+    "ticker": "JBLU",
+    "state": "ok"
+  },
+  {
+    "company": "Motorola Solutions",
+    "industry": "Network and Other Communications Equipment",
+    "csv_ticker": "MSI",
+    "ticker": "MSI",
+    "state": "ok"
+  },
+  {
+    "company": "Citizens Financial Group",
+    "industry": "Commercial Banks",
+    "csv_ticker": "CFG",
+    "ticker": "CFG",
+    "state": "ok"
+  },
+  {
+    "company": "Coterra Energy",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "CTRA",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Avery Dennison",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "AVY",
+    "ticker": "AVY",
+    "state": "ok"
+  },
+  {
+    "company": "PVH",
+    "industry": "Apparel",
+    "csv_ticker": "PVH",
+    "ticker": "PVH",
+    "state": "ok"
+  },
+  {
+    "company": "GXO Logistics",
+    "industry": "Transportation and Logistics",
+    "csv_ticker": "GXO",
+    "ticker": "GXO",
+    "state": "ok"
+  },
+  {
+    "company": "Polaris",
+    "industry": "Transportation Equipment",
+    "csv_ticker": "PII",
+    "ticker": "PII",
+    "state": "ok"
+  },
+  {
+    "company": "Global Payments",
+    "industry": "Financial Data Services",
+    "csv_ticker": "GPN",
+    "ticker": "GPN",
+    "state": "ok"
+  },
+  {
+    "company": "Arconic",
+    "industry": "Metals",
+    "csv_ticker": "ARNC",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Vertex Pharmaceuticals",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "VRTX",
+    "ticker": "VRTX",
+    "state": "ok"
+  },
+  {
+    "company": "Commercial Metals",
+    "industry": "Metals",
+    "csv_ticker": "CMC",
+    "ticker": "CMC",
+    "state": "ok"
+  },
+  {
+    "company": "Autoliv",
+    "industry": "Motor Vehicles & Parts",
+    "csv_ticker": "ALV",
+    "ticker": "ALV",
+    "state": "ok"
+  },
+  {
+    "company": "Constellation Brands",
+    "industry": "Beverages",
+    "csv_ticker": "STZ",
+    "ticker": "STZ",
+    "state": "ok"
+  },
+  {
+    "company": "Hilton Worldwide Holdings",
+    "industry": "Hotels, Casinos, Resorts",
+    "csv_ticker": "HLT",
+    "ticker": "HLT",
+    "state": "ok"
+  },
+  {
+    "company": "Foot Locker",
+    "industry": "Specialty Retailers: Apparel",
+    "csv_ticker": "FL",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Huntsman",
+    "industry": "Chemicals",
+    "csv_ticker": "HUN",
+    "ticker": "HUN",
+    "state": "ok"
+  },
+  {
+    "company": "Burlington Stores",
+    "industry": "Specialty Retailers: Apparel",
+    "csv_ticker": "BURL",
+    "ticker": "BURL",
+    "state": "ok"
+  },
+  {
+    "company": "Hertz Global Holdings",
+    "industry": "Automotive Retailing, Services",
+    "csv_ticker": "HTZ",
+    "ticker": "HTZ",
+    "state": "ok"
+  },
+  {
+    "company": "Masco",
+    "industry": "Home Equipment, Furnishings",
+    "csv_ticker": "MAS",
+    "ticker": "MAS",
+    "state": "ok"
+  },
+  {
+    "company": "Williams-Sonoma",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "WSM",
+    "ticker": "WSM",
+    "state": "ok"
+  },
+  {
+    "company": "Chipotle Mexican Grill",
+    "industry": "Food Services",
+    "csv_ticker": "CMG",
+    "ticker": "CMG",
+    "state": "ok"
+  },
+  {
+    "company": "M&T Bank",
+    "industry": "Commercial Banks",
+    "csv_ticker": "MTB",
+    "ticker": "MTB",
+    "state": "ok"
+  },
+  {
+    "company": "LPL Financial Holdings",
+    "industry": "Securities",
+    "csv_ticker": "LPLA",
+    "ticker": "LPLA",
+    "state": "ok"
+  },
+  {
+    "company": "CMS Energy",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "CMS",
+    "ticker": "CMS",
+    "state": "ok"
+  },
+  {
+    "company": "Campbell Soup",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "CPB",
+    "ticker": "CPB",
+    "state": "ok"
+  },
+  {
+    "company": "Arthur J. Gallagher",
+    "industry": "Diversified Financials",
+    "csv_ticker": "AJG",
+    "ticker": "AJG",
+    "state": "ok"
+  },
+  {
+    "company": "Blackstone",
+    "industry": "Diversified Financials",
+    "csv_ticker": "BX",
+    "ticker": "BX",
+    "state": "ok"
+  },
+  {
+    "company": "Dover",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "DOV",
+    "ticker": "DOV",
+    "state": "ok"
+  },
+  {
+    "company": "ODP",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "ODP",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Packaging Corp. of America",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "PKG",
+    "ticker": "PKG",
+    "state": "ok"
+  },
+  {
+    "company": "Brighthouse Financial",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "BHF",
+    "ticker": "BHF",
+    "state": "ok"
+  },
+  {
+    "company": "Beacon Roofing Supply",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "BECN",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Airbnb",
+    "industry": "Internet Services and Retailing",
+    "csv_ticker": "ABNB",
+    "ticker": "ABNB",
+    "state": "ok"
+  },
+  {
+    "company": "Boise Cascade",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "BCC",
+    "ticker": "BCC",
+    "state": "ok"
+  },
+  {
+    "company": "Booz Allen Hamilton Holding",
+    "industry": "Information Technology Services",
+    "csv_ticker": "BAH",
+    "ticker": "BAH",
+    "state": "ok"
+  },
+  {
+    "company": "Westinghouse Air Brake Technologies",
+    "industry": "Industrial Machinery",
+    "csv_ticker": "WAB",
+    "ticker": "WAB",
+    "state": "ok"
+  },
+  {
+    "company": "ON Semiconductor",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "ON",
+    "ticker": "ON",
+    "state": "ok"
+  },
+  {
+    "company": "Oshkosh",
+    "industry": "Construction and Farm Machinery",
+    "csv_ticker": "OSK",
+    "ticker": "OSK",
+    "state": "ok"
+  },
+  {
+    "company": "Franklin Resources",
+    "industry": "Securities",
+    "csv_ticker": "BEN",
+    "ticker": "BEN",
+    "state": "ok"
+  },
+  {
+    "company": "Taylor Morrison Home",
+    "industry": "Homebuilders",
+    "csv_ticker": "TMHC",
+    "ticker": "TMHC",
+    "state": "ok"
+  },
+  {
+    "company": "A-Mark Precious Metals",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "AMRK",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "KeyCorp",
+    "industry": "Commercial Banks",
+    "csv_ticker": "KEY",
+    "ticker": "KEY",
+    "state": "ok"
+  },
+  {
+    "company": "ARKO",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "ARKO",
+    "ticker": "ARKO",
+    "state": "ok"
+  },
+  {
+    "company": "Lululemon athletica",
+    "industry": "Specialty Retailers: Apparel",
+    "csv_ticker": "LULU",
+    "ticker": "LULU",
+    "state": "ok"
+  },
+  {
+    "company": "Old Republic International",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "ORI",
+    "ticker": "ORI",
+    "state": "ok"
+  },
+  {
+    "company": "Zoetis",
+    "industry": "Pharmaceuticals",
+    "csv_ticker": "ZTS",
+    "ticker": "ZTS",
+    "state": "ok"
+  },
+  {
+    "company": "Marathon Oil",
+    "industry": "Mining, Crude-Oil Production",
+    "csv_ticker": "MRO",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "J.M. Smucker",
+    "industry": "Food Consumer Products",
+    "csv_ticker": "SJM",
+    "ticker": "SJM",
+    "state": "ok"
+  },
+  {
+    "company": "Huntington Bancshares",
+    "industry": "Commercial Banks",
+    "csv_ticker": "HBAN",
+    "ticker": "HBAN",
+    "state": "ok"
+  },
+  {
+    "company": "NGL Energy Partners",
+    "industry": "Pipelines",
+    "csv_ticker": "NGL",
+    "ticker": "NGL",
+    "state": "ok"
+  },
+  {
+    "company": "Ingredion",
+    "industry": "Food Production",
+    "csv_ticker": "INGR",
+    "ticker": "INGR",
+    "state": "ok"
+  },
+  {
+    "company": "Fortune Brands Innovations",
+    "industry": "Building Materials, Glass",
+    "csv_ticker": "FBIN",
+    "ticker": "FBIN",
+    "state": "ok"
+  },
+  {
+    "company": "PPL",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "PPL",
+    "ticker": "PPL",
+    "state": "ok"
+  },
+  {
+    "company": "Sanmina",
+    "industry": "Semiconductors and Other Electronic Components",
+    "csv_ticker": "SANM",
+    "ticker": "SANM",
+    "state": "ok"
+  },
+  {
+    "company": "Bed Bath & Beyond",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "BBBY",
+    "ticker": "BBBY",
+    "state": "ok"
+  },
+  {
+    "company": "Cintas",
+    "industry": "Diversified Outsourcing Services",
+    "csv_ticker": "CTAS",
+    "ticker": "CTAS",
+    "state": "ok"
+  },
+  {
+    "company": "NCR",
+    "industry": "Computers, Office Equipment",
+    "csv_ticker": "NCR",
+    "ticker": "VYX",
+    "state": "fixed"
+  },
+  {
+    "company": "ABM Industries",
+    "industry": "Diversified Outsourcing Services",
+    "csv_ticker": "ABM",
+    "ticker": "ABM",
+    "state": "ok"
+  },
+  {
+    "company": "Rockwell Automation",
+    "industry": "Electronics, Electrical Equip.",
+    "csv_ticker": "ROK",
+    "ticker": "ROK",
+    "state": "ok"
+  },
+  {
+    "company": "Northern Trust",
+    "industry": "Commercial Banks",
+    "csv_ticker": "NTRS",
+    "ticker": "NTRS",
+    "state": "ok"
+  },
+  {
+    "company": "XPO",
+    "industry": "Transportation and Logistics",
+    "csv_ticker": "XPO",
+    "ticker": "XPO",
+    "state": "ok"
+  },
+  {
+    "company": "Science Applications International",
+    "industry": "Information Technology Services",
+    "csv_ticker": "SAIC",
+    "ticker": "SAIC",
+    "state": "ok"
+  },
+  {
+    "company": "Ameren",
+    "industry": "Utilities: Gas and Electric",
+    "csv_ticker": "AEE",
+    "ticker": "AEE",
+    "state": "ok"
+  },
+  {
+    "company": "First American Financial",
+    "industry": "Insurance: Property and Casualty (Stock)",
+    "csv_ticker": "FAF",
+    "ticker": "FAF",
+    "state": "ok"
+  },
+  {
+    "company": "Bath & Body Works",
+    "industry": "Specialty Retailers: Other",
+    "csv_ticker": "BBWI",
+    "ticker": "BBWI",
+    "state": "ok"
+  },
+  {
+    "company": "Regions Financial",
+    "industry": "Commercial Banks",
+    "csv_ticker": "RF",
+    "ticker": "RF",
+    "state": "ok"
+  },
+  {
+    "company": "Activision Blizzard",
+    "industry": "Entertainment",
+    "csv_ticker": "ATVI",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Avantor",
+    "industry": "Scientific, Photographic and Control Equipment",
+    "csv_ticker": "AVTR",
+    "ticker": "AVTR",
+    "state": "ok"
+  },
+  {
+    "company": "Genworth Financial",
+    "industry": "Insurance: Life, Health (Stock)",
+    "csv_ticker": "GNW",
+    "ticker": "GNW",
+    "state": "ok"
+  },
+  {
+    "company": "EQT",
+    "industry": "Energy",
+    "csv_ticker": "EQT",
+    "ticker": "EQT",
+    "state": "ok"
+  },
+  {
+    "company": "Skechers U.S.A.",
+    "industry": "Apparel",
+    "csv_ticker": "SKX",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Landstar System",
+    "industry": "Trucking, Truck Leasing",
+    "csv_ticker": "LSTR",
+    "ticker": "LSTR",
+    "state": "ok"
+  },
+  {
+    "company": "Knight-Swift Transportation Holdings",
+    "industry": "Trucking, Truck Leasing",
+    "csv_ticker": "KNX",
+    "ticker": "KNX",
+    "state": "ok"
+  },
+  {
+    "company": "SVB Financial Group",
+    "industry": "Commercial Banks",
+    "csv_ticker": "SIVBQ",
+    "ticker": null,
+    "state": "no-ticker"
+  },
+  {
+    "company": "Par Pacific Holdings",
+    "industry": "Petroleum Refining",
+    "csv_ticker": "PARR",
+    "ticker": "PARR",
+    "state": "ok"
+  },
+  {
+    "company": "Albemarle",
+    "industry": "Chemicals",
+    "csv_ticker": "ALB",
+    "ticker": "ALB",
+    "state": "ok"
+  },
+  {
+    "company": "Vulcan Materials",
+    "industry": "Building Materials, Glass",
+    "csv_ticker": "VMC",
+    "ticker": "VMC",
+    "state": "ok"
+  },
+  {
+    "company": "Watsco",
+    "industry": "Wholesalers: Diversified",
+    "csv_ticker": "WSO",
+    "ticker": "WSO",
+    "state": "ok"
+  },
+  {
+    "company": "KKR",
+    "industry": "Securities",
+    "csv_ticker": "KKR",
+    "ticker": "KKR",
+    "state": "ok"
+  },
+  {
+    "company": "Equinix",
+    "industry": "Real Estate",
+    "csv_ticker": "EQIX",
+    "ticker": "EQIX",
+    "state": "ok"
+  },
+  {
+    "company": "Sonoco Products",
+    "industry": "Packaging, Containers",
+    "csv_ticker": "SON",
+    "ticker": "SON",
+    "state": "ok"
+  },
+  {
+    "company": "ServiceNow",
+    "industry": "Computer Software",
+    "csv_ticker": "NOW",
+    "ticker": "NOW",
+    "state": "ok"
+  },
+  {
+    "company": "Robert Half International",
+    "industry": "Temporary Help",
+    "csv_ticker": "RHI",
+    "ticker": "RHI",
+    "state": "ok"
+  }
+]

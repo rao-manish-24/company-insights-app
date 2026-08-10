@@ -113,6 +113,9 @@ class MarketDataService:
 
         try:
             hint = (ticker or "").strip().upper() or None
+            if not hint and self._is_known_private(cleaned):
+                logger.info("Yahoo Finance skipped for private company=%r", cleaned)
+                return market
             if hint:
                 ticker_cached = market_cache.get(f"market:ticker:{hint}")
                 if isinstance(ticker_cached, dict):
@@ -213,6 +216,13 @@ class MarketDataService:
                 logger.info("Yahoo Finance stale cache after error company=%r", cleaned)
                 return copy.deepcopy(stale)
             return empty_market()
+
+    def _is_known_private(self, company_name: str) -> bool:
+        # Imported lazily: the lookup service imports this module at load time.
+        from app.services.company_lookup_service import KNOWN_PRIVATE_NAMES
+        from app.services.company_validation import normalize_name
+
+        return normalize_name(company_name) in KNOWN_PRIVATE_NAMES
 
     def _store_market(self, cache_key: str, market: dict[str, Any]) -> dict[str, Any]:
         if market.get("ticker"):

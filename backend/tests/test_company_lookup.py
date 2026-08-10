@@ -182,8 +182,24 @@ def test_bain_and_company_auto_analyzes_full_name() -> None:
     parts = service._query_parts("Bain & Company")
     assert service._is_exact_match(parts, suggestion) is True
     assert service._should_auto_analyze(parts, suggestion, [suggestion]) is True
-    # Short stem alone should stay in suggestion mode (Bain Capital, etc.).
+    # "Bain" is a roster entry for Bain & Company, so it now resolves rather than
+    # dead-ending; Bain Capital stays reachable by typing its full name.
     short = service._query_parts("Bain")
+    assert service._should_auto_analyze(short, suggestion, [suggestion]) is True
+
+
+def test_short_brand_without_roster_entry_stays_ambiguous() -> None:
+    """The brand_suffix length rule still applies to companies we do not ship."""
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    suggestion = CompanySuggestion(
+        name="Kelor Holdings",
+        description="Company · kelor.com",
+        confidence=0.99,
+        source="clearbit",
+        location="kelor.com",
+        match_kind="brand_suffix",
+    )
+    short = service._query_parts("Kelor")
     assert service._should_auto_analyze(short, suggestion, [suggestion]) is False
 
 

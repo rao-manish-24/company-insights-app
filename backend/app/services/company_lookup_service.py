@@ -12,6 +12,7 @@ import httpx
 
 from app.core.http import get_fast_http_client, get_http_client, get_json
 from app.core.rate_limit import lookup_cache
+from app.data.fortune500 import FORTUNE500
 from app.services.company_validation import (
     description_is_rejected,
     description_looks_like_company,
@@ -60,6 +61,21 @@ _ADULT_OR_SPAM_DOMAIN_BITS = (
     "onlyfans",
     "redgifs",
 )
+# Clearbit indexes governments and universities as "companies", which is how the
+# query "Texas" used to resolve to texas.gov.
+_NON_COMPANY_DOMAIN_SUFFIXES = (
+    ".gov",
+    ".mil",
+    ".edu",
+    ".ac.uk",
+    ".gov.uk",
+    ".edu.au",
+    ".gov.au",
+    ".ac.in",
+    ".edu.in",
+    ".gov.in",
+    ".int",
+)
 # Keep probe set small — only used when the primary Clearbit search is thin.
 _SHORT_QUERY_PROBES = ("hat", "bull", "energy", "lily", "taco", "sparrow")
 _CORP_SUFFIX_TOKENS = frozenset(
@@ -92,7 +108,9 @@ _STRONG_SOURCES = frozenset({"wikidata", "wikipedia", "yahoo"})
 # Canonical rescue when upstream search is thin (Render IP blocks / empty Clearbit).
 # Keys are stemmed token tuples from company_validation.stemmed_tokens().
 # Values: (canonical name, ticker or "", optional blurb for private firms).
-_KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str] | tuple[str, str, str]] = {
+# Hand-written entries win over the generated Fortune 500 roster below, since
+# they carry better canonical names ("Apple Inc." rather than "Apple").
+_CURATED_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str] | tuple[str, str, str]] = {
     ("advanced", "micro", "device"): ("Advanced Micro Devices, Inc.", "AMD"),
     ("apple",): ("Apple Inc.", "AAPL"),
     ("microsoft",): ("Microsoft Corporation", "MSFT"),
@@ -142,8 +160,153 @@ _KNOWN_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str] | tuple[str, str, s
     ("openai",): ("OpenAI", "", "Artificial intelligence research company"),
 }
 
-# Hand-maintained, so membership is itself proof the company is real.
+
+# Everyday names mapped to their roster entry. Deliberately hand-picked: deriving
+# these automatically from first tokens hijacks ordinary words and given names
+# ("Texas" → Texas Instruments, "Robert" → Robert Half, "Discover" → Discover
+# Financial), because a roster hit resolves without asking the user.
+_COMPANY_ALIASES: dict[str, str] = {
+    "Disney": "Walt Disney",
+    "Costco": "Costco Wholesale",
+    "Ford": "Ford Motor",
+    "UPS": "United Parcel Service",
+    "Pepsi": "PepsiCo",
+    "Delta": "Delta Air Lines",
+    "Schwab": "Charles Schwab",
+    "Walgreens": "Walgreens Boots Alliance",
+    "CVS": "CVS Health",
+    "Verizon": "Verizon Communications",
+    "Exxon": "Exxon Mobil",
+    "ExxonMobil": "Exxon Mobil",
+    "Abbott": "Abbott Laboratories",
+    "Cisco": "Cisco Systems",
+    "Dell": "Dell Technologies",
+    "Berkshire": "Berkshire Hathaway",
+    "Lockheed": "Lockheed Martin",
+    "Northrop": "Northrop Grumman",
+    "Honeywell": "Honeywell International",
+    "Marriott": "Marriott International",
+    "Hilton": "Hilton Worldwide Holdings",
+    "GM": "General Motors",
+    "Amex": "American Express",
+    "P&G": "Procter & Gamble",
+    "J&J": "Johnson & Johnson",
+    "ADP": "Automatic Data Processing",
+    "ADM": "Archer Daniels Midland",
+    "Labcorp": "Laboratory Corp. of America",
+    "Con Edison": "Consolidated Edison",
+    "Bristol Myers": "Bristol-Myers Squibb",
+    "Thermo Fisher": "Thermo Fisher Scientific",
+    "Texas Instruments": "Texas Instruments",
+    "Kimberly Clark": "Kimberly-Clark",
+    "Colgate": "Colgate-Palmolive",
+    "Sherwin Williams": "Sherwin-Williams",
+    "Freeport": "Freeport-McMoRan",
+    "Mondelez": "Mondelez International",
+    "Baxter": "Baxter International",
+    "Becton Dickinson": "Becton Dickinson",
+    "Regeneron": "Regeneron Pharmaceuticals",
+    "Gilead": "Gilead Sciences",
+    "Vertex": "Vertex Pharmaceuticals",
+    "Cognizant": "Cognizant Technology Solutions",
+    "Motorola": "Motorola Solutions",
+    "Chipotle": "Chipotle Mexican Grill",
+    "Lululemon": "Lululemon athletica",
+    "Southwest Airlines": "Southwest Airlines",
+    "JetBlue": "JetBlue Airways",
+    "Norfolk Southern": "Norfolk Southern",
+    "Union Pacific": "Union Pacific",
+    "Waste Management": "Waste Management",
+    "Kinder Morgan": "Kinder Morgan",
+    "Occidental": "Occidental Petroleum",
+    "Valero": "Valero Energy",
+    "NextEra": "NextEra Energy",
+    "Duke Energy": "Duke Energy",
+    "Cardinal Health": "Cardinal Health",
+    "Tyson": "Tyson Foods",
+    "Kraft Heinz": "Kraft Heinz",
+    "Conagra": "Conagra Brands",
+    "Hormel": "Hormel Foods",
+    "Estee Lauder": "Estée Lauder",
+    "Ross Stores": "Ross Stores",
+    "Dick's": "Dick's Sporting Goods",
+    "Tractor Supply": "Tractor Supply",
+    "Ulta": "Ulta Beauty",
+    "Truist": "Truist Financial",
+    "Synchrony": "Synchrony Financial",
+    "Ameriprise": "Ameriprise Financial",
+    "Prudential": "Prudential Financial",
+    "Fannie Mae": "Fannie Mae",
+    "Freddie Mac": "Freddie Mac",
+    "Elevance": "Elevance Health",
+    "Molina": "Molina Healthcare",
+    "Quest Diagnostics": "Quest Diagnostics",
+    "Henry Schein": "Henry Schein",
+    "Applied Materials": "Applied Materials",
+    "Analog Devices": "Analog Devices",
+    "Rockwell": "Rockwell Automation",
+    "Emerson": "Emerson Electric",
+    "Parker Hannifin": "Parker-Hannifin",
+    "Stanley Black & Decker": "Stanley Black & Decker",
+    "Illinois Tool Works": "Illinois Tool Works",
+    "Paramount": "Paramount Global",
+    "Warner Bros": "Warner Bros. Discovery",
+    "Charter": "Charter Communications",
+    "Live Nation": "Live Nation Entertainment",
+    "Booz Allen": "Booz Allen Hamilton Holding",
+    "Jacobs": "Jacobs Solutions",
+    "Otis": "Otis Worldwide",
+    "Carrier": "Carrier Global",
+    "Sysco": "Sysco",
+    "Publix": "Publix Super Markets",
+    "State Farm": "State Farm Insurance",
+    "USAA": "United Services Automobile Assn.",
+    "MassMutual": "Massachusetts Mutual Life Insurance",
+    "Nationwide": "Nationwide",
+    "Liberty Mutual": "Liberty Mutual Insurance Group",
+    "New York Life": "New York Life Insurance",
+}
+
+
+def _build_known_companies() -> dict[tuple[str, ...], tuple[str, str] | tuple[str, str, str]]:
+    """Fortune 500 roster first, then hand-written entries override it."""
+    known: dict[tuple[str, ...], tuple[str, str] | tuple[str, str, str]] = {}
+    for name, ticker, industry in FORTUNE500:
+        key = stemmed_tokens(name)
+        if not key:
+            continue
+        if ticker:
+            known[key] = (name, ticker)
+        else:
+            # No live symbol (renamed, acquired, or mutually held), so let market
+            # data resolve by search and still describe it as a real company.
+            blurb = f"Fortune 500 company · {industry}" if industry else "Fortune 500 company"
+            known[key] = (name, "", blurb)
+    by_name = {name: entry for entry, name in ((v, v[0]) for v in known.values())}
+    for alias, canonical in _COMPANY_ALIASES.items():
+        entry = by_name.get(canonical)
+        key = stemmed_tokens(alias)
+        if entry and key and key not in known:
+            known[key] = entry
+    known.update(_CURATED_STEM_COMPANIES)
+    return known
+
+
+_KNOWN_STEM_COMPANIES = _build_known_companies()
+
+# Membership is itself proof the company is real: the roster is the published
+# Fortune 500 plus a hand-maintained list, so no upstream lookup can contradict it.
 KNOWN_COMPANY_STEMS: frozenset[tuple[str, ...]] = frozenset(_KNOWN_STEM_COMPANIES)
+# Canonical names too: analyze validates the resolved name, which does not always
+# stem back to the key it was found under.
+KNOWN_COMPANY_NAMES: frozenset[str] = frozenset(
+    normalize_name(value[0]) for value in _KNOWN_STEM_COMPANIES.values()
+)
+# Firms we know are privately held, so searching Yahoo by name can only produce a
+# false positive (the query "PwC" matches an unrelated PWC listing).
+KNOWN_PRIVATE_NAMES: frozenset[str] = frozenset(
+    normalize_name(value[0]) for value in _CURATED_STEM_COMPANIES.values() if not value[1]
+)
 
 
 @dataclass(frozen=True)
@@ -569,8 +732,9 @@ class CompanyLookupService:
             source=source,
             ticker=ticker or None,
         )
-        if scored["confidence"] < SUGGEST_CONFIDENCE:
-            return []
+        # The stem key came from the query itself, so this is the right company
+        # even when the legal name scores poorly ("The Goldman Sachs Group, Inc.").
+        kind = scored["match_kind"] if scored["match_kind"] in _STRONG_SUGGEST_KINDS else "exact"
         return [
             CompanySuggestion(
                 name=name,
@@ -579,7 +743,7 @@ class CompanyLookupService:
                 source=source,
                 ticker=ticker or None,
                 location=location,
-                match_kind=scored["match_kind"],
+                match_kind=kind,
             )
         ]
 
@@ -616,6 +780,8 @@ class CompanyLookupService:
             if domain and domain in seen_domains:
                 continue
             if domain and any(bit in domain for bit in _ADULT_OR_SPAM_DOMAIN_BITS):
+                continue
+            if domain.endswith(_NON_COMPANY_DOMAIN_SUFFIXES):
                 continue
             if self._looks_like_person_name(name, parts.norm, domain=domain):
                 continue
@@ -1242,9 +1408,19 @@ class CompanyLookupService:
         extras = tokens[1:]
         return bool(extras) and all(tok in _CORP_SUFFIX_TOKENS for tok in extras)
 
+    def _known_canonical(self, parts: _QueryParts) -> str | None:
+        """Canonical name when the query is itself a roster company."""
+        hit = _KNOWN_STEM_COMPANIES.get(stemmed_tokens(parts.norm))
+        return hit[0] if hit else None
+
     def _is_exact_match(self, parts: _QueryParts | str, suggestion: CompanySuggestion) -> bool:
         if isinstance(parts, str):
             parts = self._query_parts(parts)
+        # The roster is keyed by the query's own stems, so a hit is exact by
+        # construction even where the legal name diverges ("Goldman Sachs Group"
+        # → "The Goldman Sachs Group, Inc.").
+        if self._known_canonical(parts) == suggestion.name:
+            return True
         # Always classify against the current query — never trust a stale match_kind.
         kind = self._classify_match(parts, suggestion.name, ticker=suggestion.ticker)
         return kind in {"exact", "ticker", "brand_suffix"}
@@ -1267,6 +1443,12 @@ class CompanyLookupService:
             return False
 
         if parts.is_ticker:
+            return True
+
+        # Typing a roster company's own name leaves nothing to disambiguate, so
+        # short brands ("Apple", "Visa") must not be held back by the
+        # brand_suffix length rule below.
+        if self._known_canonical(parts) == chosen.name:
             return True
 
         # "Bain & Company" → normalize collapses to "bain", but the raw typed tokens

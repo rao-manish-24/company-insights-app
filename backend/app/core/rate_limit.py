@@ -57,6 +57,9 @@ class TtlCache:
             stale_until=now + hard,
         )
 
+    def clear(self) -> None:
+        self._store.clear()
+
 
 class SlidingWindowRateLimiter:
     """Per-key sliding window limiter."""

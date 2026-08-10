@@ -41,6 +41,28 @@ _REJECT_DESCRIPTION_BITS = (
     "female name",
     "human settlement",
     "village",
+    # Places: Wikidata gives US states an inception date, which otherwise reads
+    # as a company signal and let the query "Texas" through.
+    "state of the united states",
+    "u.s. state",
+    "us state",
+    "largest city",
+    "capital city",
+    "state in ",
+    "city in ",
+    "town in ",
+    "county in ",
+    "province of",
+    "province in",
+    "region of",
+    "region in",
+    "municipality",
+    "capital of",
+    "country in",
+    "sovereign state",
+    "island in",
+    "river in",
+    "mountain in",
     "film",
     "song",
     "album",
@@ -307,7 +329,9 @@ def description_looks_like_company(description: str | None) -> bool:
 def profile_has_company_signal(profile: dict[str, Any] | None) -> bool:
     if not isinstance(profile, dict):
         return False
-    if profile.get("founded") or profile.get("headquarters") or profile.get("employees"):
+    # A founding date alone proves nothing — cities, universities and countries
+    # all have an inception year in Wikidata (this let "London" through).
+    if profile.get("headquarters") or profile.get("employees"):
         return True
     if profile.get("revenue") or profile.get("parent_company"):
         return True
@@ -341,9 +365,13 @@ def is_curated_company(company_name: str) -> bool:
     Kearney), so the curated list has to outrank a missing company record.
     """
     # Imported lazily: the lookup service imports this module at load time.
-    from app.services.company_lookup_service import KNOWN_COMPANY_STEMS
+    from app.services.company_lookup_service import KNOWN_COMPANY_NAMES, KNOWN_COMPANY_STEMS
 
-    return stemmed_tokens(company_name) in KNOWN_COMPANY_STEMS
+    if stemmed_tokens(company_name) in KNOWN_COMPANY_STEMS:
+        return True
+    # Analyze receives the canonical name, which does not always stem back to its
+    # own key ("Goldman Sachs Group" → "The Goldman Sachs Group, Inc.").
+    return normalize_name(company_name) in KNOWN_COMPANY_NAMES
 
 
 def company_evidence_ok(
