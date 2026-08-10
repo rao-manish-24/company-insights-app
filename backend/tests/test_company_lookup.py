@@ -110,6 +110,24 @@ def test_bain_known_fallback_private_firm() -> None:
         assert fallbacks[0].source == "wikipedia"
 
 
+def test_google_resolves_to_google_not_alphabet() -> None:
+    """News/briefs should stay on the brand the partner typed (Google ≠ Alphabet)."""
+    service = CompanyLookupService.__new__(CompanyLookupService)
+    service._clearbit_candidates = lambda parts: []  # type: ignore[method-assign]
+    service._collect_candidates = lambda parts: service._known_company_fallbacks(parts)  # type: ignore[method-assign]
+    from app.core.rate_limit import lookup_cache
+
+    lookup_cache.clear()
+    google = service.resolve("Google")
+    assert google.status == "exact"
+    assert google.matched_name == "Google"
+    assert google.suggestions and google.suggestions[0].ticker == "GOOGL"
+
+    alphabet = service.resolve("Alphabet")
+    assert alphabet.status == "exact"
+    assert alphabet.matched_name == "Alphabet Inc."
+
+
 def test_resolve_fast_path_exact_without_full_collect() -> None:
     service = CompanyLookupService.__new__(CompanyLookupService)
     service._clearbit_candidates = lambda parts: [  # type: ignore[method-assign]

@@ -118,7 +118,10 @@ _CURATED_STEM_COMPANIES: dict[tuple[str, ...], tuple[str, str] | tuple[str, str,
     ("nvidia",): ("NVIDIA Corporation", "NVDA"),
     ("amazon",): ("Amazon.com, Inc.", "AMZN"),
     ("alphabet",): ("Alphabet Inc.", "GOOGL"),
-    ("google",): ("Alphabet Inc.", "GOOGL"),
+    # Keep the operating brand as the brief/news subject. Market data still uses
+    # GOOGL (Alphabet's listing); renaming Google→Alphabet made NewsAPI pull
+    # holding-company financing stories instead of Google product news.
+    ("google",): ("Google", "GOOGL", "Technology company (Alphabet)"),
     ("meta",): ("Meta Platforms, Inc.", "META"),
     ("facebook",): ("Meta Platforms, Inc.", "META"),
     ("netflix",): ("Netflix, Inc.", "NFLX"),
